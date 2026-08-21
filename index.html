@@ -1,0 +1,1536 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>IT Brothers Operations Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/css/tabler.min.css">
+
+  <style>
+    .header-logo {
+      height: 40px !important;
+      width: auto !important;
+      object-fit: contain;
+    }
+    .live-datetime {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #626976;
+    }
+    .top-dashboard-header {
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 1000 !important;
+      background-color: #f8fafc !important;
+      padding-top: 10px;
+      padding-bottom: 10px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+    }
+  </style>
+</head>
+
+<body class="theme-light">
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbzNtkplZTaCjRiRHofsfIgGINhX3W2ZF0HgV6xHdG0JzsLi8I8KbwG-dpH2TY_DtKa3/exec";
+  </script>
+
+  <div class="page">
+    <!-- 📌 STICKY TOP HEADER WRAPPER -->
+    <div class="top-dashboard-header">       
+      <header class="navbar navbar-expand-md navbar-light d-print-none">
+        <div class="container-xl">
+          <div class="d-flex align-items-center me-3">
+            <img src="logo.png" alt="IT Brothers" style="height: 40px; width: auto; object-fit: contain;" class="me-2" onerror="this.src='https://via.placeholder.com/150x40?text=IT+Brothers'">
+            <div>
+              <h1 class="navbar-brand navbar-brand-autodark m-0 p-0 fs-2 text-primary fw-bold">IT Brothers Operations Dashboard</h1>
+              <div id="live-datetime" class="text-muted small fw-medium" style="font-size: 0.8rem;"></div>
+            </div>
+          </div>
+          
+          <!-- Date Selection Filter Bar -->
+          <div class="d-flex align-items-center gap-2 my-2 my-md-0 me-md-3 flex-wrap">
+            <span class="fw-bold text-muted small">Viewing:</span>
+            <input type="date" id="selected-dashboard-date" class="form-control form-control-sm" onchange="onDateFilterChange()" style="width: auto;">
+            <button onclick="resetToToday()" class="btn btn-sm btn-outline-secondary" id="btn-today">Today</button>
+            <button onclick="filterThisMonth()" class="btn btn-sm btn-outline-warning" id="btn-month">This Month</button>
+            <button onclick="toggleCustomRange()" class="btn btn-sm btn-outline-primary" id="btn-range-toggle">📅 Custom Range</button>
+            <button onclick="showAllDates()" class="btn btn-sm btn-outline-info" id="btn-alldates">All Dates</button>
+          </div>
+
+          <!-- Custom From-To Date Range Selector -->
+          <div class="d-none align-items-center gap-2 my-2 my-md-0 me-md-3 p-2 bg-white rounded border shadow-sm" id="custom-range-bar">
+            <span class="fw-bold text-muted small">From:</span>
+            <input type="date" id="range-start-date" class="form-control form-control-sm" style="width: auto;">
+            <span class="fw-bold text-muted small">To:</span>
+            <input type="date" id="range-end-date" class="form-control form-control-sm" style="width: auto;">
+            <button onclick="applyCustomRange()" class="btn btn-sm btn-primary">Apply</button>
+            <button onclick="cancelCustomRange()" class="btn btn-sm btn-ghost-secondary">Cancel</button>
+          </div>
+
+          <div class="navbar-nav flex-row order-md-last ms-auto gap-2">
+            <button onclick="openReportModal()" class="btn btn-outline-success">📋 Generate Advisor Report</button>
+            <button onclick="fetchDashboardData()" class="btn btn-outline-primary" id="btn-refresh">🔄 Refresh Data</button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Top KPI Cards -->
+      <div class="container-xl pt-3 pb-2">
+        <div class="row row-deck row-cards">
+          <div class="col-sm-6 col-lg-3">
+            <div class="card">
+              <div class="card-body">
+                <div class="subheader text-success" id="kpi-sales-label">Today's Sales</div>
+                <div class="h1 mb-0 text-success" id="kpi-sales">Rs. 0</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="card">
+              <div class="card-body">
+                <div class="subheader text-danger">Pending Cash Due</div>
+                <div class="h1 mb-0 text-danger" id="kpi-pending">Rs. 0</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="card">
+              <div class="card-body">
+                <div class="subheader text-warning">Active Shop Jobs</div>
+                <div class="h1 mb-0 text-warning" id="kpi-active-jobs">0</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="card">
+              <div class="card-body">
+                <div class="subheader text-secondary" id="kpi-expense-label">Today's Expenses</div>
+                <div class="h1 mb-0 text-secondary" id="kpi-expenses">Rs. 0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-wrapper">
+      <div class="page-body">
+        <div class="container-xl">
+
+          <!-- Panel 1: Live Work Queue -->
+          <div class="row row-cards mb-4">
+            <div class="col-12">
+              <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <h3 class="card-title" id="panel-queue-title">🛠️ Active Shop Queue & Today's Works</h3>
+                  <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-add-job">+ Add New Work Order</button>
+                </div>
+                <div class="table-responsive">
+                  <table class="table card-table table-vcenter text-nowrap datatable">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Customer</th>
+                        <th>Job Description</th>
+                        <th>Qty</th>
+                        <th>Total (Rs.)</th>
+                        <th>Paid (Rs.)</th>
+                        <th>Pending Cash</th>
+                        <th>Priority</th>
+                        <th>Shop Status</th>
+                        <th>Instructions</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="job-table-body">
+                      <tr><td colspan="11" class="text-center text-muted">Loading live tasks...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Panel 2: Outstanding Payments Across All Dates -->
+          <div class="row row-cards mb-4">
+            <div class="col-12">
+              <div class="card border-danger-subtle">
+                <div class="card-header bg-danger-lt d-flex justify-content-between align-items-center">
+                  <h3 class="card-title text-danger fw-bold">⚠️ Outstanding Payments & Receivables (All Dates)</h3>
+                  <span class="badge bg-danger" id="pending-count-badge">0 Pending Orders</span>
+                </div>
+                <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                  <table class="table card-table table-vcenter text-nowrap">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Customer</th>
+                        <th>Job Description</th>
+                        <th>Qty</th>
+                        <th>Total Amount</th>
+                        <th>Paid So Far</th>
+                        <th>Unpaid Balance</th>
+                        <th>Shop Status</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="pending-payments-body">
+                      <tr><td colspan="9" class="text-center text-muted">No pending payments found across past dates</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Panel 3: Financials (Sales & Expenses) -->
+          <div class="row row-cards">
+            <!-- Sales Log -->
+            <div class="col-lg-6">
+              <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <h3 class="card-title" id="panel-sales-title">💵 Line-by-Line Sales Log</h3>
+                  <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modal-add-sale">+ Log Quick Sale</button>
+                </div>
+                <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                  <table class="table card-table table-vcenter">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Customer</th>
+                        <th>Service / Item</th>
+                        <th>Qty</th>
+                        <th>Amount Paid</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="sales-log-body">
+                      <tr><td colspan="7" class="text-center text-muted">No transactions logged</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Expenses Log -->
+            <div class="col-lg-6">
+              <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <h3 class="card-title" id="panel-expense-title">📉 Line-by-Line Expenses</h3>
+                  <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modal-add-expense">+ Log Expense</button>
+                </div>
+                <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                  <table class="table card-table table-vcenter">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Expense / Description</th>
+                        <th>Qty</th>
+                        <th>Category</th>
+                        <th>Amount (Rs.)</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="expense-table-body">
+                      <tr><td colspan="6" class="text-center text-muted">No expenses recorded</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL FOR GENERATING ADVISOR REPORT -->
+  <div class="modal modal-blur fade" id="modal-advisor-report" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">📅 Generate Financial Advisor Daily Report</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Foreign Client Income (Rs.)</label>
+              <input type="number" id="rpt-foreign-income" class="form-control" value="0" oninput="compileAdvisorReport()">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Cash Remaining (Rs.)</label>
+              <input type="number" id="rpt-cash-remaining" class="form-control" value="0" oninput="compileAdvisorReport()">
+            </div>
+          </div>
+
+          <div class="hr-text my-2">Personal Expenses & Savings</div>
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Personal - Home (Rs.)</label>
+              <input type="number" id="rpt-exp-home" class="form-control" value="0" oninput="compileAdvisorReport()">
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Personal - Food (Rs.)</label>
+              <input type="text" id="rpt-exp-food" class="form-control" placeholder="e.g. 750 (Kajoor)" value="0" oninput="compileAdvisorReport()">
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Personal - Charity (Rs.)</label>
+              <input type="number" id="rpt-exp-charity" class="form-control" value="0" oninput="compileAdvisorReport()">
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Personal - Other Details</label>
+              <input type="text" id="rpt-exp-personal-other" class="form-control" placeholder="e.g. 830 (Medicine)" oninput="compileAdvisorReport()">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Additional Pending Notes (Optional)</label>
+              <input type="text" id="rpt-pending-notes" class="form-control" placeholder="e.g. Extra billing details..." oninput="compileAdvisorReport()">
+            </div>
+          </div>
+
+          <div class="hr-text my-2">Marketing Uploads</div>
+          <div class="row">
+            <div class="col-4 mb-3">
+              <label class="form-label"><small>TikTok Posts</small></label>
+              <input type="number" id="rpt-mkt-tiktok" class="form-control form-control-sm" value="0" oninput="compileAdvisorReport()">
+            </div>
+            <div class="col-4 mb-3">
+              <label class="form-label"><small>FB Reels</small></label>
+              <input type="number" id="rpt-mkt-reels" class="form-control form-control-sm" value="0" oninput="compileAdvisorReport()">
+            </div>
+            <div class="col-4 mb-3">
+              <label class="form-label"><small>FB Posts</small></label>
+              <input type="number" id="rpt-mkt-fbposts" class="form-control form-control-sm" value="0" oninput="compileAdvisorReport()">
+            </div>
+          </div>
+
+          <div class="hr-text my-2">Customer Sources</div>
+          <div class="row">
+            <div class="col-2 mb-3">
+              <label class="form-label"><small>Walk-in</small></label>
+              <input type="number" id="rpt-src-walkin" class="form-control form-control-sm" value="0" oninput="compileAdvisorReport()">
+            </div>
+            <div class="col-2 mb-3">
+              <label class="form-label"><small>WhatsApp</small></label>
+              <input type="number" id="rpt-src-whatsapp" class="form-control form-control-sm" value="0" oninput="compileAdvisorReport()">
+            </div>
+            <div class="col-2 mb-3">
+              <label class="form-label"><small>Facebook</small></label>
+              <input type="number" id="rpt-src-fb" class="form-control form-control-sm" value="0" oninput="compileAdvisorReport()">
+            </div>
+            <div class="col-2 mb-3">
+              <label class="form-label"><small>TikTok</small></label>
+              <input type="number" id="rpt-src-tiktok" class="form-control form-control-sm" value="0" oninput="compileAdvisorReport()">
+            </div>
+            <div class="col-2 mb-3">
+              <label class="form-label"><small>Referral</small></label>
+              <input type="number" id="rpt-src-referral" class="form-control form-control-sm" value="0" oninput="compileAdvisorReport()">
+            </div>
+            <div class="col-2 mb-3">
+              <label class="form-label"><small>Repeat</small></label>
+              <input type="number" id="rpt-src-repeat" class="form-control form-control-sm" value="0" oninput="compileAdvisorReport()">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Today's Achievement</label>
+            <input type="text" id="rpt-achievement" class="form-control" placeholder="e.g. Completed banner batch" oninput="compileAdvisorReport()">
+          </div>
+
+          <div class="hr-text my-2">Generated Report Output</div>
+          <div class="mb-3">
+            <textarea id="rpt-output" class="form-control font-monospace" rows="14" readonly></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" onclick="compileAdvisorReport()" class="btn btn-secondary">⚡ Update Text</button>
+          <button type="button" onclick="copyReportToClipboard()" class="btn btn-success">📋 Copy Report to Clipboard</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALS FOR ADDING -->
+  <div class="modal modal-blur fade" id="modal-add-job" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Create New Work Order</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-lg-5 mb-3">
+              <label class="form-label">Customer Name</label>
+              <input type="text" id="input-customer" class="form-control" placeholder="e.g. Ali Khan">
+            </div>
+            <div class="col-lg-5 mb-3">
+              <label class="form-label">Job Description</label>
+              <input type="text" id="input-job" class="form-control" placeholder="e.g. Banner Printing 6x3">
+            </div>
+            <div class="col-lg-2 mb-3">
+              <label class="form-label">Quantity</label>
+              <input type="number" id="input-qty" class="form-control" value="1" min="1">
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-lg-3 mb-3">
+              <label class="form-label">Total Amount (Rs.)</label>
+              <input type="number" id="input-total" class="form-control" placeholder="0">
+            </div>
+            <div class="col-lg-3 mb-3">
+              <label class="form-label">Amount Paid (Rs.)</label>
+              <input type="number" id="input-paid" class="form-control" placeholder="0">
+            </div>
+            <div class="col-lg-3 mb-3">
+              <label class="form-label">Shop Status</label>
+              <select id="select-status" class="form-select">
+                <option value="🔴 Not Started" selected>🔴 Not Started</option>
+                <option value="🟡 In Progress">🟡 In Progress</option>
+                <option value="🟢 Ready">🟢 Ready</option>
+              </select>
+            </div>
+            <div class="col-lg-3 mb-3">
+              <label class="form-label">Priority</label>
+              <select id="select-priority" class="form-select">
+                <option value="🔴 High">🔴 High</option>
+                <option value="🟡 Medium" selected>🟡 Medium</option>
+                <option value="🟢 Low">🟢 Low</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Work Instructions / Notes</label>
+            <textarea id="input-instructions" class="form-control" rows="3" placeholder="Special requirements, size, details..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn me-auto" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" onclick="submitNewJob()" class="btn btn-primary">Add Work Order</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal modal-blur fade" id="modal-add-sale" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Log Quick Sale</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Customer Name</label>
+            <input type="text" id="sale-customer" class="form-control">
+          </div>
+          <div class="row">
+            <div class="col-8 mb-3">
+              <label class="form-label">Service / Product Sold</label>
+              <input type="text" id="sale-job" class="form-control">
+            </div>
+            <div class="col-4 mb-3">
+              <label class="form-label">Quantity</label>
+              <input type="number" id="sale-qty" class="form-control" value="1" min="1">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Amount Collected (Rs.)</label>
+            <input type="number" id="sale-paid" class="form-control">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn me-auto" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" onclick="submitNewSale()" class="btn btn-success">Save Sale</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal modal-blur fade" id="modal-add-expense" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Log Daily Expense</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-8 mb-3">
+              <label class="form-label">Description / Item</label>
+              <input type="text" id="expense-desc" class="form-control">
+            </div>
+            <div class="col-4 mb-3">
+              <label class="form-label">Quantity</label>
+              <input type="number" id="expense-qty" class="form-control" value="1" min="1">
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-6 mb-3">
+              <label class="form-label">Category</label>
+              <select id="expense-cat" class="form-select">
+                <option value="Raw Materials">Raw Materials</option>
+                <option value="Utilities">Utilities / Grid</option>
+                <option value="Maintenance">Maintenance</option>
+                <option value="Employee">Employee</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="col-6 mb-3">
+              <label class="form-label">Amount (Rs.)</label>
+              <input type="number" id="expense-amount" class="form-control">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn me-auto" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" onclick="submitNewExpense()" class="btn btn-danger">Save Expense</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALS FOR EDITING -->
+  <div class="modal modal-blur fade" id="modal-edit-job" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Work Order</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="edit-job-rowindex">
+          <div class="row">
+            <div class="col-lg-3 mb-3">
+              <label class="form-label">Date</label>
+              <input type="date" id="edit-job-date" class="form-control">
+            </div>
+            <div class="col-lg-4 mb-3">
+              <label class="form-label">Customer Name</label>
+              <input type="text" id="edit-job-customer" class="form-control">
+            </div>
+            <div class="col-lg-3 mb-3">
+              <label class="form-label">Job Description</label>
+              <input type="text" id="edit-job-desc" class="form-control">
+            </div>
+            <div class="col-lg-2 mb-3">
+              <label class="form-label">Quantity</label>
+              <input type="number" id="edit-job-qty" class="form-control" min="1">
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-lg-3 mb-3">
+              <label class="form-label">Total Amount (Rs.)</label>
+              <input type="number" id="edit-job-total" class="form-control">
+            </div>
+            <div class="col-lg-3 mb-3">
+              <label class="form-label">Amount Paid (Rs.)</label>
+              <input type="number" id="edit-job-paid" class="form-control">
+            </div>
+            <div class="col-lg-3 mb-3">
+              <label class="form-label">Shop Status</label>
+              <select id="edit-job-status" class="form-select">
+                <option value="🔴 Not Started">🔴 Not Started</option>
+                <option value="🟡 In Progress">🟡 In Progress</option>
+                <option value="🟢 Ready">🟢 Ready</option>
+              </select>
+            </div>
+            <div class="col-lg-3 mb-3">
+              <label class="form-label">Priority</label>
+              <select id="edit-job-priority" class="form-select">
+                <option value="🔴 High">🔴 High</option>
+                <option value="🟡 Medium">🟡 Medium</option>
+                <option value="🟢 Low">🟢 Low</option>
+              </select>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Work Instructions</label>
+            <textarea id="edit-job-instructions" class="form-control" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn me-auto" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" onclick="submitEditJob()" class="btn btn-primary">Update Work Order</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal modal-blur fade" id="modal-edit-sale" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Sale Entry</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="edit-sale-rowindex">
+          <div class="mb-3">
+            <label class="form-label">Date</label>
+            <input type="date" id="edit-sale-date" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Customer Name</label>
+            <input type="text" id="edit-sale-customer" class="form-control">
+          </div>
+          <div class="row">
+            <div class="col-8 mb-3">
+              <label class="form-label">Service / Item</label>
+              <input type="text" id="edit-sale-job" class="form-control">
+            </div>
+            <div class="col-4 mb-3">
+              <label class="form-label">Quantity</label>
+              <input type="number" id="edit-sale-qty" class="form-control" min="1">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Amount Paid (Rs.)</label>
+            <input type="number" id="edit-sale-paid" class="form-control">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn me-auto" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" onclick="submitEditSale()" class="btn btn-success">Update Sale</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal modal-blur fade" id="modal-edit-expense" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Expense Entry</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="edit-expense-rowindex">
+          <div class="mb-3">
+            <label class="form-label">Date</label>
+            <input type="date" id="edit-expense-date" class="form-control">
+          </div>
+          <div class="row">
+            <div class="col-8 mb-3">
+              <label class="form-label">Description / Item</label>
+              <input type="text" id="edit-expense-desc" class="form-control">
+            </div>
+            <div class="col-4 mb-3">
+              <label class="form-label">Quantity</label>
+              <input type="number" id="edit-expense-qty" class="form-control" min="1">
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-6 mb-3">
+              <label class="form-label">Category</label>
+              <select id="edit-expense-cat" class="form-select">
+                <option value="Raw Materials">Raw Materials</option>
+                <option value="Utilities">Utilities / Grid</option>
+                <option value="Maintenance">Maintenance</option>
+                <option value="Employee">Employee</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="col-6 mb-3">
+              <label class="form-label">Amount (Rs.)</label>
+              <input type="number" id="edit-expense-amount" class="form-control">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn me-auto" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" onclick="submitEditExpense()" class="btn btn-danger">Update Expense</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOOTSTRAP JS & TABLER JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/js/tabler.min.js"></script>
+
+  <script>
+    let globalData = { jobs: [], sales: [], expenses: [] };
+    let computedSelectedSales = 0;
+    let computedExpenses = { wages: 0, materials: 0, equipment: 0, other: [], rawMaterialsList: [], maintenanceList: [] };
+    let completedJobsSummary = [];
+    let outstandingItemsSummary = [];
+
+    // Mode: 'today', 'specific', 'range', or 'all'
+    let currentFilterMode = 'today'; 
+    let selectedDateVal = getTodayString();
+    let rangeStartDateVal = '';
+    let rangeEndDateVal = '';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('selected-dashboard-date').value = selectedDateVal;
+      fetchDashboardData();
+      setInterval(fetchDashboardData, 30000);
+      updateLiveDateTime();
+      setInterval(updateLiveDateTime, 1000);
+    });
+
+    async function fetchDashboardData() {
+      const btn = document.getElementById('btn-refresh');
+      if(btn) btn.innerText = "⏳ Loading...";
+      try {
+        const res = await fetch(API_URL);
+        globalData = await res.json();
+        renderDashboard(globalData);
+      } catch (e) {
+        console.error("Error fetching data:", e);
+      } finally {
+        if(btn) btn.innerText = "🔄 Refresh Data";
+      }
+    }
+
+    function updateLiveDateTime() {
+      const now = new Date();
+      const options = {
+        weekday: 'short', year: 'numeric', month: 'short', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+      };
+      const dateTimeElement = document.getElementById('live-datetime');
+      if (dateTimeElement) {
+        dateTimeElement.textContent = now.toLocaleString('en-US', options).replace(',', '');
+      }
+    }
+
+    function getLocalDateString(val) {
+      if (!val) return '';
+      if (typeof val === 'string' && val.length >= 10 && val.includes('-')) {
+        return val.substring(0, 10);
+      }
+      const d = new Date(val);
+      if (isNaN(d.getTime())) return '';
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function getTodayString() {
+      const d = new Date();
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function onDateFilterChange() {
+      const val = document.getElementById('selected-dashboard-date').value;
+      if (val) {
+        selectedDateVal = val;
+        currentFilterMode = (val === getTodayString()) ? 'today' : 'specific';
+        cancelCustomRange();
+        renderDashboard(globalData);
+      }
+    }
+
+    function resetToToday() {
+      selectedDateVal = getTodayString();
+      document.getElementById('selected-dashboard-date').value = selectedDateVal;
+      currentFilterMode = 'today';
+      cancelCustomRange();
+      renderDashboard(globalData);
+    }
+
+    function showAllDates() {
+      currentFilterMode = 'all';
+      cancelCustomRange();
+      renderDashboard(globalData);
+    }
+
+    function filterThisMonth() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+      
+      rangeStartDateVal = `${year}-${month}-01`;
+      rangeEndDateVal = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+      
+      const startEl = document.getElementById('range-start-date');
+      const endEl = document.getElementById('range-end-date');
+      if (startEl) startEl.value = rangeStartDateVal;
+      if (endEl) endEl.value = rangeEndDateVal;
+      
+      currentFilterMode = 'range';
+      renderDashboard(globalData);
+    }
+
+    function toggleCustomRange() {
+      const rangeBar = document.getElementById('custom-range-bar');
+      if (rangeBar) {
+        if (rangeBar.classList.contains('d-none')) {
+          rangeBar.classList.remove('d-none');
+          rangeBar.classList.add('d-flex');
+          if (!rangeStartDateVal) {
+            filterThisMonth();
+          }
+        } else {
+          rangeBar.classList.remove('d-flex');
+          rangeBar.classList.add('d-none');
+        }
+      }
+    }
+
+    function applyCustomRange() {
+      const start = document.getElementById('range-start-date').value;
+      const end = document.getElementById('range-end-date').value;
+      
+      if (!start || !end) {
+        alert("Please select both From and To dates!");
+        return;
+      }
+      if (start > end) {
+        alert("Start date cannot be after end date!");
+        return;
+      }
+      
+      rangeStartDateVal = start;
+      rangeEndDateVal = end;
+      currentFilterMode = 'range';
+      renderDashboard(globalData);
+    }
+
+    function cancelCustomRange() {
+      const rangeBar = document.getElementById('custom-range-bar');
+      if (rangeBar) {
+        rangeBar.classList.remove('d-flex');
+        rangeBar.classList.add('d-none');
+      }
+    }
+
+    function renderDashboard(data) {
+      let totalSales = 0;
+      let totalPending = 0;
+      let activeJobs = 0;
+      let totalExpenses = 0;
+
+      computedExpenses = { wages: 0, materials: 0, equipment: 0, other: [], rawMaterialsList: [], maintenanceList: [] };
+      completedJobsSummary = [];
+      outstandingItemsSummary = [];
+
+      const activeDateFilter = selectedDateVal;
+
+      if (currentFilterMode === 'all') {
+        document.getElementById('kpi-sales-label').innerText = "All Time Sales";
+        document.getElementById('kpi-expense-label').innerText = "All Time Expenses";
+        document.getElementById('panel-queue-title').innerText = "🛠️ Work Queue (All Dates)";
+        document.getElementById('panel-sales-title').innerText = "💵 Line-by-Line Sales Log (All Dates)";
+        document.getElementById('panel-expense-title').innerText = "📉 Line-by-Line Expenses (All Dates)";
+      } else if (currentFilterMode === 'range') {
+        const label = `${rangeStartDateVal} to ${rangeEndDateVal}`;
+        document.getElementById('kpi-sales-label').innerText = `Sales (${label})`;
+        document.getElementById('kpi-expense-label').innerText = `Expenses (${label})`;
+        document.getElementById('panel-queue-title').innerText = `🛠️ Work Queue (${label})`;
+        document.getElementById('panel-sales-title').innerText = `💵 Sales Log (${label})`;
+        document.getElementById('panel-expense-title').innerText = `📉 Expenses (${label})`;
+      } else if (currentFilterMode === 'specific') {
+        document.getElementById('kpi-sales-label').innerText = `Sales (${activeDateFilter})`;
+        document.getElementById('kpi-expense-label').innerText = `Expenses (${activeDateFilter})`;
+        document.getElementById('panel-queue-title').innerText = `🛠️ Work Queue (${activeDateFilter})`;
+        document.getElementById('panel-sales-title').innerText = `💵 Sales Log (${activeDateFilter})`;
+        document.getElementById('panel-expense-title').innerText = `📉 Expenses (${activeDateFilter})`;
+      } else {
+        document.getElementById('kpi-sales-label').innerText = "Today's Sales";
+        document.getElementById('kpi-expense-label').innerText = "Today's Expenses";
+        document.getElementById('panel-queue-title').innerText = "🛠️ Active Shop Queue & Today's Works";
+        document.getElementById('panel-sales-title').innerText = "💵 Line-by-Line Sales Log";
+        document.getElementById('panel-expense-title').innerText = "📉 Line-by-Line Daily Expenses";
+      }
+
+      let jobRowsHtml = '';
+      let pendingPaymentsHtml = '';
+      let pendingPaymentsCount = 0;
+
+      if (data.jobs && data.jobs.length > 0) {
+        data.jobs.forEach(row => {
+          const total = parseFloat(row["Total Amount"]) || 0;
+          const paid = parseFloat(row["Amount Paid"]) || 0;
+          const pending = parseFloat(row["Pending Cash"]) || (total - paid);
+          const status = row["Shop Status"] || '🔴 Not Started';
+          const rowDate = getLocalDateString(row["Date"]);
+          const custName = row["Customer Name"] || 'Walk-in';
+          const jobDesc = row["Job Description"] || '';
+          const qty = parseInt(row["Quantity"] || row["Qty"]) || 1;
+
+          totalPending += pending;
+          const isCompleted = status.includes('Ready') || status.includes('Completed');
+          
+          let matchesFilter = false;
+          if (currentFilterMode === 'all') {
+            matchesFilter = true;
+          } else if (currentFilterMode === 'range') {
+            matchesFilter = (rowDate >= rangeStartDateVal && rowDate <= rangeEndDateVal);
+          } else {
+            matchesFilter = (rowDate === activeDateFilter);
+          }
+
+          if (!isCompleted || matchesFilter) {
+            if (!isCompleted) activeJobs++;
+
+            jobRowsHtml += `
+              <tr>
+                <td>${rowDate}</td>
+                <td><strong>${custName}</strong></td>
+                <td>${jobDesc}</td>
+                <td><span class="badge bg-blue-lt">${qty}</span></td>
+                <td>Rs. ${total.toLocaleString('en-PK')}</td>
+                <td>Rs. ${paid.toLocaleString('en-PK')}</td>
+                <td class="${pending > 0 ? 'text-danger fw-bold' : 'text-success'}">Rs. ${pending.toLocaleString('en-PK')}</td>
+                <td><span class="badge bg-secondary-lt">${row["Priority"] || '🟡 Medium'}</span></td>
+                <td>
+                  <select class="form-select form-select-sm" onchange="updateJobStatus(${row.rowIndex}, this.value)">
+                    <option value="🔴 Not Started" ${status.includes('Not Started') ? 'selected' : ''}>🔴 Not Started</option>
+                    <option value="🟡 In Progress" ${status.includes('In Progress') ? 'selected' : ''}>🟡 In Progress</option>
+                    <option value="🟢 Ready" ${status.includes('Ready') ? 'selected' : ''}>🟢 Ready</option>
+                  </select>
+                </td>
+                <td><small class="text-muted">${row["Work Instructions"] || ''}</small></td>
+                <td>
+                  <div class="btn-list flex-nowrap">
+                    ${pending > 0 ? `
+                      <button class="btn btn-sm btn-success me-1" onclick="payJobFull(${row.rowIndex}, ${pending})">💵 Full Pay</button>
+                      <button class="btn btn-sm btn-outline-success me-1" onclick="payJobPartial(${row.rowIndex}, ${pending})">✏️ Partial</button>
+                    ` : ''}
+                    <button class="btn btn-ghost-primary btn-icon btn-sm" onclick="openEditJobModal(${row.rowIndex})">✏️ Edit</button>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }
+
+          if (pending > 0) {
+            pendingPaymentsCount++;
+            outstandingItemsSummary.push({
+              customer: custName,
+              job: jobDesc,
+              pending: pending,
+              date: rowDate
+            });
+
+            pendingPaymentsHtml += `
+              <tr>
+                <td><span class="badge bg-outline text-secondary">${rowDate}</span></td>
+                <td><strong>${custName}</strong></td>
+                <td>${jobDesc}</td>
+                <td><span class="badge bg-blue-lt">${qty}</span></td>
+                <td>Rs. ${total.toLocaleString('en-PK')}</td>
+                <td>Rs. ${paid.toLocaleString('en-PK')}</td>
+                <td class="text-danger fw-bold fs-3">Rs. ${pending.toLocaleString('en-PK')}</td>
+                <td>
+                  <select class="form-select form-select-sm" onchange="updateJobStatus(${row.rowIndex}, this.value)">
+                    <option value="🔴 Not Started" ${status.includes('Not Started') ? 'selected' : ''}>🔴 Not Started</option>
+                    <option value="🟡 In Progress" ${status.includes('In Progress') ? 'selected' : ''}>🟡 In Progress</option>
+                    <option value="🟢 Ready" ${status.includes('Ready') ? 'selected' : ''}>🟢 Ready</option>
+                  </select>
+                </td>
+                <td>
+                  <div class="btn-list flex-nowrap">
+                    <button class="btn btn-sm btn-success me-1" onclick="payJobFull(${row.rowIndex}, ${pending})">💵 Full Pay</button>
+                    <button class="btn btn-sm btn-outline-success me-1" onclick="payJobPartial(${row.rowIndex}, ${pending})">✏️ Partial Pay</button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="openEditJobModal(${row.rowIndex})">⚙️ Edit</button>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }
+        });
+      }
+
+      let salesRowsHtml = '';
+      if (data.sales && data.sales.length > 0) {
+        data.sales.forEach(row => {
+          const paid = parseFloat(row["Amount Paid"]) || 0;
+          const rowDate = getLocalDateString(row["Date"]);
+          const qty = parseInt(row["Quantity"] || row["Qty"]) || 1;
+          const custName = row["Customer Name"] || 'Walk-in';
+
+          let matchesFilter = false;
+          if (currentFilterMode === 'all') {
+            matchesFilter = true;
+          } else if (currentFilterMode === 'range') {
+            matchesFilter = (rowDate >= rangeStartDateVal && rowDate <= rangeEndDateVal);
+          } else {
+            matchesFilter = (rowDate === activeDateFilter);
+          }
+
+          if (matchesFilter) {
+            totalSales += paid;
+            
+            const serviceItem = row["Service / Item"] || 'Quick Sale';
+            completedJobsSummary.push({
+              title: `${custName} - ${serviceItem}`,
+              qty: qty,
+              price: paid
+            });
+
+            salesRowsHtml += `
+              <tr>
+                <td><small class="text-muted">${rowDate}</small></td>
+                <td><strong>${custName}</strong></td>
+                <td>${serviceItem}</td>
+                <td><span class="badge bg-blue-lt">${qty}</span></td>
+                <td class="text-success fw-bold">Rs. ${paid.toLocaleString('en-PK')}</td>
+                <td><span class="badge bg-success-lt">Paid</span></td>
+                <td>
+                  <button class="btn btn-ghost-success btn-icon btn-sm" onclick="openEditSaleModal(${row.rowIndex})">✏️ Edit</button>
+                </td>
+              </tr>
+            `;
+          }
+        });
+      }
+
+      let expenseRowsHtml = '';
+      if (data.expenses && data.expenses.length > 0) {
+        data.expenses.forEach(row => {
+          const expAmt = parseFloat(row["Amount"]) || 0;
+          const rowDate = getLocalDateString(row["Date"]);
+          const qty = parseInt(row["Quantity"] || row["Qty"]) || 1;
+
+          let matchesFilter = false;
+          if (currentFilterMode === 'all') {
+            matchesFilter = true;
+          } else if (currentFilterMode === 'range') {
+            matchesFilter = (rowDate >= rangeStartDateVal && rowDate <= rangeEndDateVal);
+          } else {
+            matchesFilter = (rowDate === activeDateFilter);
+          }
+
+          if (matchesFilter) {
+            totalExpenses += expAmt;
+            const category = (row["Category"] || '').toLowerCase();
+            const desc = row["Expense Description"] || row["Description"] || 'General Expense';
+
+            if (category.includes('wage') || category.includes('employee')) {
+              computedExpenses.wages += expAmt;
+            } else if (category.includes('material') || category.includes('raw')) {
+              computedExpenses.materials += expAmt;
+              computedExpenses.rawMaterialsList.push(`${desc}${qty > 1 ? ` x${qty}` : ''} - Rs. ${expAmt.toLocaleString('en-PK')}`);
+            } else if (category.includes('maintenance') || category.includes('utility') || category.includes('equipment')) {
+              computedExpenses.equipment += expAmt;
+              computedExpenses.maintenanceList.push(`${desc}${qty > 1 ? ` x${qty}` : ''} - Rs. ${expAmt.toLocaleString('en-PK')}`);
+            } else {
+              computedExpenses.other.push(`${expAmt} (${desc}${qty > 1 ? ` x${qty}` : ''})`);
+            }
+
+            expenseRowsHtml += `
+              <tr>
+                <td><small class="text-muted">${rowDate}</small></td>
+                <td>${desc}</td>
+                <td><span class="badge bg-blue-lt">${qty}</span></td>
+                <td><span class="badge bg-secondary-lt">${row["Category"] || 'Materials'}</span></td>
+                <td class="fw-bold text-danger">Rs. ${expAmt.toLocaleString('en-PK')}</td>
+                <td>
+                  <button class="btn btn-ghost-danger btn-icon btn-sm" onclick="openEditExpenseModal(${row.rowIndex})">✏️ Edit</button>
+                </td>
+              </tr>
+            `;
+          }
+        });
+      }
+
+      computedSelectedSales = totalSales;
+
+      document.getElementById('kpi-sales').innerText = `Rs. ${totalSales.toLocaleString('en-PK')}`;
+      document.getElementById('kpi-pending').innerText = `Rs. ${totalPending.toLocaleString('en-PK')}`;
+      document.getElementById('kpi-active-jobs').innerText = activeJobs;
+      document.getElementById('kpi-expenses').innerText = `Rs. ${totalExpenses.toLocaleString('en-PK')}`;
+
+      document.getElementById('job-table-body').innerHTML = jobRowsHtml || '<tr><td colspan="11" class="text-center text-muted">No active work orders found for selected date range</td></tr>';
+      document.getElementById('pending-payments-body').innerHTML = pendingPaymentsHtml || '<tr><td colspan="9" class="text-center text-muted">No pending payments found across past dates</td></tr>';
+      document.getElementById('pending-count-badge').innerText = `${pendingPaymentsCount} Pending Orders`;
+
+      document.getElementById('sales-log-body').innerHTML = salesRowsHtml || '<tr><td colspan="7" class="text-center text-muted">No sales logged for selected view</td></tr>';
+      document.getElementById('expense-table-body').innerHTML = expenseRowsHtml || '<tr><td colspan="6" class="text-center text-muted">No expenses recorded for selected view</td></tr>';
+    }
+
+    function sendToSheet(payload) {
+      return fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(data => {
+        fetchDashboardData();
+        return data;
+      })
+      .catch(err => {
+        console.error("Backend error:", err);
+        fetchDashboardData();
+      });
+    }
+
+    function closeModal(modalId) {
+      const modalEl = document.getElementById(modalId);
+      if (!modalEl) return;
+      
+      const modalInstance = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
+      if (modalInstance) {
+        modalInstance.hide();
+      }
+
+      // Cleanup lingering backdrop elements & scroll locks after CSS transition completes
+      setTimeout(() => {
+        document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+      }, 350);
+    }
+
+    function payJobFull(rowIndex, pendingAmount) {
+      const item = globalData.jobs.find(j => j.rowIndex === rowIndex);
+      const customerName = item ? (item["Customer Name"] || 'Walk-in') : 'Walk-in';
+      const jobDesc = item ? item["Job Description"] || '' : '';
+
+      const isCOD = confirm(
+        `Order Balance: Rs. ${pendingAmount.toLocaleString('en-PK')}\n\n` +
+        `Click "OK" for ONLINE (COD) Order\n` +
+        `Click "Cancel" for BY-HAND / WALK-IN Order`
+      );
+
+      if (isCOD) {
+        const feeStr = prompt(`Enter COD / Courier fee deducted by shipping service (Enter 0 if none):`, "0");
+        if (feeStr === null) return;
+        
+        const codFee = parseFloat(feeStr) || 0;
+
+        const requests = [
+          sendToSheet({ 
+            action: "updatePayment", 
+            rowIndex: rowIndex, 
+            amountPaid: pendingAmount, 
+            paymentType: "Online COD" 
+          })
+        ];
+
+        if (codFee > 0) {
+          requests.push(
+            sendToSheet({
+              action: 'addExpense',
+              date: getTodayString(),
+              description: `COD Fee: ${customerName} (${jobDesc})`,
+              quantity: 1,
+              category: 'Other',
+              amount: codFee
+            })
+          );
+        }
+
+        Promise.all(requests).then(() => fetchDashboardData());
+
+      } else {
+        if (confirm(`Confirm receiving FULL payment of Rs. ${pendingAmount.toLocaleString('en-PK')} in cash/by-hand?`)) {
+          sendToSheet({ 
+            action: "updatePayment", 
+            rowIndex: rowIndex, 
+            amountPaid: pendingAmount, 
+            paymentType: "Full Payment (By-Hand)" 
+          });
+        }
+      }
+    }
+
+    function payJobPartial(rowIndex, pendingAmount) {
+      const amountStr = prompt(`Enter payment amount received (Max pending: Rs. ${pendingAmount}):`);
+      if (!amountStr) return;
+      
+      const amount = parseFloat(amountStr);
+      if (isNaN(amount) || amount <= 0 || amount > pendingAmount) {
+        alert("Please enter a valid amount!");
+        return;
+      }
+
+      sendToSheet({ 
+        action: "updatePayment", 
+        rowIndex: rowIndex, 
+        amountPaid: amount, 
+        paymentType: "Partial Payment" 
+      });
+    }
+
+    function openReportModal() {
+      compileAdvisorReport();
+      const modalEl = document.getElementById('modal-advisor-report');
+      bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+
+    function compileAdvisorReport() {
+      const d = new Date();
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const formattedDate = `${String(d.getDate()).padStart(2, '0')} ${months[d.getMonth()]} ${d.getFullYear()}`;
+
+      const wagesText = computedExpenses.wages > 0 ? `Rs. ${computedExpenses.wages.toLocaleString('en-PK')}` : '0';
+      
+      let materialsText = '0';
+      if (computedExpenses.materials > 0) {
+        materialsText = `Rs. ${computedExpenses.materials.toLocaleString('en-PK')}` + 
+          (computedExpenses.rawMaterialsList.length > 0 ? ` (${computedExpenses.rawMaterialsList.join(', ')})` : '');
+      }
+
+      let equipmentText = '0';
+      if (computedExpenses.equipment > 0) {
+        equipmentText = `Rs. ${computedExpenses.equipment.toLocaleString('en-PK')}` + 
+          (computedExpenses.maintenanceList.length > 0 ? ` (${computedExpenses.maintenanceList.join(', ')})` : '');
+      }
+
+      const otherExpText = computedExpenses.other.length > 0 ? computedExpenses.other.join(', ') : '0';
+
+      const foreignInc = document.getElementById('rpt-foreign-income')?.value || 0;
+      const cashRem = document.getElementById('rpt-cash-remaining')?.value || 0;
+
+      const expHome = document.getElementById('rpt-exp-home')?.value || 0;
+      const expFood = document.getElementById('rpt-exp-food')?.value || "0";
+      const expCharity = document.getElementById('rpt-exp-charity')?.value || 0;
+      const expPersonalOther = document.getElementById('rpt-exp-personal-other')?.value || "0";
+
+      const pendingNotes = document.getElementById('rpt-pending-notes')?.value.trim() || "";
+      const achievement = document.getElementById('rpt-achievement')?.value || "None";
+
+      const tiktok = document.getElementById('rpt-mkt-tiktok')?.value || 0;
+      const reels = document.getElementById('rpt-mkt-reels')?.value || 0;
+      const fbposts = document.getElementById('rpt-mkt-fbposts')?.value || 0;
+
+      const walkin = document.getElementById('rpt-src-walkin')?.value || 0;
+      const whatsapp = document.getElementById('rpt-src-whatsapp')?.value || 0;
+      const srcFb = document.getElementById('rpt-src-fb')?.value || 0;
+      const srcTikTok = document.getElementById('rpt-src-tiktok')?.value || 0;
+      const srcReferral = document.getElementById('rpt-src-referral')?.value || 0;
+      const srcRepeat = document.getElementById('rpt-src-repeat')?.value || 0;
+
+      let completedJobsText = (completedJobsSummary.length > 0)
+        ? completedJobsSummary.map(j => `  * ${j.title} - Qty: ${j.qty} (Price: Rs. ${j.price.toLocaleString('en-PK')})`).join('\n')
+        : "  * None completed today";
+
+      let totalPendingSum = 0;
+      let pendingDetailsLines = [];
+
+      if (outstandingItemsSummary.length > 0) {
+        outstandingItemsSummary.forEach(item => {
+          totalPendingSum += item.pending;
+          pendingDetailsLines.push(`  * ${item.customer} (${item.job}): Rs. ${item.pending.toLocaleString('en-PK')}`);
+        });
+      }
+
+      let pendingReportBlock = `Total Outstanding: Rs. ${totalPendingSum.toLocaleString('en-PK')}`;
+      if (pendingDetailsLines.length > 0) {
+        pendingReportBlock += `\n${pendingDetailsLines.join('\n')}`;
+      } else {
+        pendingReportBlock += `\n  * No pending receivables`;
+      }
+      if (pendingNotes) {
+        pendingReportBlock += `\nNote: ${pendingNotes}`;
+      }
+
+      const textReport = 
+`📅 ${formattedDate}    
+💰 Income
+Shop Sales: ${computedSelectedSales}
+Foreign Client Income: ${foreignInc} 
+
+🏪 Business Expenses
+Employee wages: ${wagesText}
+Materials: ${materialsText} 
+Equipment / Maintenance: ${equipmentText} 
+Other: ${otherExpText} 
+
+🏠 Personal Expenses
+Home: ${expHome}
+Food: ${expFood}
+Charity: ${expCharity}
+Other: ${expPersonalOther}
+
+💼 Committee Savings
+Monthly Contribution: Rs. 10,000
+Duration: 15 months
+Members: 15
+
+📱 Marketing
+TikTok: ${tiktok} 
+Facebook Reels: ${reels} 
+Facebook Posts: ${fbposts}
+
+📦 Orders
+What jobs were completed?
+${completedJobsText}
+ 
+📞 Customer Source
+Walk-in: ${walkin} 
+WhatsApp Status: ${whatsapp}
+Facebook: ${srcFb}
+TikTok: ${srcTikTok}
+Referral: ${srcReferral}
+Repeat Customer: ${srcRepeat}  
+
+📦 Pending Payments
+${pendingReportBlock}
+
+💵 Cash Remaining: Rs.${cashRem} 
+
+⭐ Today's Achievement
+${achievement}`;
+
+      const rptOutput = document.getElementById('rpt-output');
+      if (rptOutput) rptOutput.value = textReport;
+    }
+
+    function copyReportToClipboard() {
+      const copyText = document.getElementById('rpt-output');
+      copyText.select();
+      copyText.setSelectionRange(0, 99999);
+      navigator.clipboard.writeText(copyText.value);
+      alert("Advisor Report copied to clipboard!");
+    }
+
+    async function submitNewJob() {
+      const customerInput = document.getElementById('input-customer');
+      const jobInput = document.getElementById('input-job');
+      const qtyInput = document.getElementById('input-qty');
+      const totalInput = document.getElementById('input-total');
+      const paidInput = document.getElementById('input-paid');
+      const statusInput = document.getElementById('select-status');
+      const priorityInput = document.getElementById('select-priority');
+      const instructionsInput = document.getElementById('input-instructions');
+
+      const customer = customerInput?.value.trim() || '';
+      const job = jobInput?.value.trim() || '';
+      const qty = parseInt(qtyInput?.value) || 1;
+      const total = parseFloat(totalInput?.value) || 0;
+      const paid = parseFloat(paidInput?.value) || 0;
+      const status = statusInput?.value || '🔴 Not Started';
+      const priority = priorityInput?.value || '🟡 Medium';
+      const instructions = instructionsInput?.value.trim() || '';
+      
+      if (!customer && !job) {
+        alert("Please enter a customer name or job description!");
+        return;
+      }
+
+      closeModal('modal-add-job');
+
+      if (customerInput) customerInput.value = '';
+      if (jobInput) jobInput.value = '';
+      if (qtyInput) qtyInput.value = '1';
+      if (totalInput) totalInput.value = '';
+      if (paidInput) paidInput.value = '';
+      if (instructionsInput) instructionsInput.value = '';
+
+      const todayStr = getTodayString();
+      const requests = [
+        sendToSheet({
+          action: "addJob",
+          date: todayStr,
+          customer, job, quantity: qty, total, paid, status, priority, instructions
+        })
+      ];
+
+      if (paid > 0) {
+        requests.push(
+          sendToSheet({
+            action: 'addSale',
+            date: todayStr,
+            customer: customer || 'Walk-in',
+            job: `${job} (Advance Payment)`,
+            quantity: qty,
+            paid: paid
+          })
+        );
+      }
+
+      try {
+        await Promise.all(requests);
+      } catch (err) {
+        console.error("Error submitting job:", err);
+      }
+    }
+
+    async function submitNewSale() {
+      const customerInput = document.getElementById('sale-customer');
+      const jobInput = document.getElementById('sale-job');
+      const qtyInput = document.getElementById('sale-qty');
+      const paidInput = document.getElementById('sale-paid');
+
+      const customer = customerInput?.value.trim() || 'Walk-in';
+      const job = jobInput?.value.trim() || 'Quick Sale';
+      const qty = parseInt(qtyInput?.value) || 1;
+      const paid = parseFloat(paidInput?.value) || 0;
+
+      closeModal('modal-add-sale');
+
+      if (customerInput) customerInput.value = '';
+      if (jobInput) jobInput.value = '';
+      if (qtyInput) qtyInput.value = '1';
+      if (paidInput) paidInput.value = '';
+
+      try {
+        await sendToSheet({
+          action: 'addSale',
+          date: getTodayString(),
+          customer: customer,
+          job: job,
+          quantity: qty,
+          paid: paid
+        });
+      } catch (err) {
+        console.error("Error submitting sale:", err);
+      }
+    }
+
+    async function submitNewExpense() {
+      const descInput = document.getElementById('expense-desc');
+      const qtyInput = document.getElementById('expense-qty');
+      const catInput = document.getElementById('expense-cat');
+      const amountInput = document.getElementById('expense-amount');
+
+      const desc = descInput?.value.trim() || '';
+      const qty = parseInt(qtyInput?.value) || 1;
+      const cat = catInput?.value || 'Raw Materials';
+      const amount = parseFloat(amountInput?.value) || 0;
+
+      closeModal('modal-add-expense');
+
+      if (descInput) descInput.value = '';
+      if (qtyInput) qtyInput.value = '1';
+      if (amountInput) amountInput.value = '';
+
+      try {
+        await sendToSheet({
+          action: 'addExpense',
+          date: getTodayString(),
+          description: desc,
+          quantity: qty,
+          category: cat,
+          amount: amount
+        });
+      } catch (err) {
+        console.error("Error submitting expense:", err);
+      }
+    }
+
+    function openEditJobModal(rowIndex) {
+      const item = globalData.jobs.find(j => j.rowIndex === rowIndex);
+      if (!item) return;
+      document.getElementById('edit-job-rowindex').value = rowIndex;
+      document.getElementById('edit-job-date').value = getLocalDateString(item["Date"]);
+      document.getElementById('edit-job-customer').value = item["Customer Name"] || '';
+      document.getElementById('edit-job-desc').value = item["Job Description"] || '';
+      document.getElementById('edit-job-qty').value = item["Quantity"] || item["Qty"] || 1;
+      document.getElementById('edit-job-total').value = item["Total Amount"] || 0;
+      document.getElementById('edit-job-paid').value = item["Amount Paid"] || 0;
+      document.getElementById('edit-job-status').value = item["Shop Status"] || '🔴 Not Started';
+      document.getElementById('edit-job-priority').value = item["Priority"] || '🟡 Medium';
+      document.getElementById('edit-job-instructions').value = item["Work Instructions"] || '';
+      
+      const modalEl = document.getElementById('modal-edit-job');
+      bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+
+    function openEditSaleModal(rowIndex) {
+      const item = globalData.sales.find(s => s.rowIndex === rowIndex);
+      if (!item) return;
+      document.getElementById('edit-sale-rowindex').value = rowIndex;
+      document.getElementById('edit-sale-date').value = getLocalDateString(item["Date"]);
+      document.getElementById('edit-sale-customer').value = item["Customer Name"] || '';
+      document.getElementById('edit-sale-job').value = item["Service / Item"] || '';
+      document.getElementById('edit-sale-qty').value = item["Quantity"] || item["Qty"] || 1;
+      document.getElementById('edit-sale-paid').value = item["Amount Paid"] || 0;
+      
+      const modalEl = document.getElementById('modal-edit-sale');
+      bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+
+    function openEditExpenseModal(rowIndex) {
+      const item = globalData.expenses.find(e => e.rowIndex === rowIndex);
+      if (!item) return;
+      document.getElementById('edit-expense-rowindex').value = rowIndex;
+      document.getElementById('edit-expense-date').value = getLocalDateString(item["Date"]);
+      document.getElementById('edit-expense-desc').value = item["Expense Description"] || item["Description"] || '';
+      document.getElementById('edit-expense-qty').value = item["Quantity"] || item["Qty"] || 1;
+      document.getElementById('edit-expense-cat').value = item["Category"] || 'Raw Materials';
+      document.getElementById('edit-expense-amount').value = item["Amount"] || 0;
+      
+      const modalEl = document.getElementById('modal-edit-expense');
+      bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+
+    async function submitEditJob() {
+      const rowIndex = parseInt(document.getElementById('edit-job-rowindex').value);
+      const date = document.getElementById('edit-job-date').value;
+      const customer = document.getElementById('edit-job-customer').value;
+      const job = document.getElementById('edit-job-desc').value;
+      const qty = parseInt(document.getElementById('edit-job-qty').value) || 1;
+      const total = parseFloat(document.getElementById('edit-job-total').value) || 0;
+      const paid = parseFloat(document.getElementById('edit-job-paid').value) || 0;
+      const status = document.getElementById('edit-job-status').value;
+      const priority = document.getElementById('edit-job-priority').value;
+      const instructions = document.getElementById('edit-job-instructions').value;
+
+      closeModal('modal-edit-job');
+
+      try {
+        await sendToSheet({
+          action: 'updateJob',
+          rowIndex, date, customer, job, quantity: qty, total, paid, status, priority, instructions
+        });
+      } catch (err) {
+        console.error("Error editing job:", err);
+      }
+    }
+
+    async function submitEditSale() {
+      const rowIndex = parseInt(document.getElementById('edit-sale-rowindex').value);
+      const date = document.getElementById('edit-sale-date').value;
+      const customer = document.getElementById('edit-sale-customer').value;
+      const job = document.getElementById('edit-sale-job').value;
+      const qty = parseInt(document.getElementById('edit-sale-qty').value) || 1;
+      const paid = parseFloat(document.getElementById('edit-sale-paid').value) || 0;
+
+      closeModal('modal-edit-sale');
+
+      try {
+        await sendToSheet({
+          action: 'updateSale',
+          rowIndex, date, customer, job, quantity: qty, paid
+        });
+      } catch (err) {
+        console.error("Error editing sale:", err);
+      }
+    }
+
+    async function submitEditExpense() {
+      const rowIndex = parseInt(document.getElementById('edit-expense-rowindex').value);
+      const date = document.getElementById('edit-expense-date').value;
+      const description = document.getElementById('edit-expense-desc').value;
+      const qty = parseInt(document.getElementById('edit-expense-qty').value) || 1;
+      const category = document.getElementById('edit-expense-cat').value;
+      const amount = parseFloat(document.getElementById('edit-expense-amount').value) || 0;
+
+      closeModal('modal-edit-expense');
+
+      try {
+        await sendToSheet({
+          action: 'updateExpense',
+          rowIndex, date, description, quantity: qty, category, amount
+        });
+      } catch (err) {
+        console.error("Error editing expense:", err);
+      }
+    }
+
+    function updateJobStatus(rowIndex, status) {
+      sendToSheet({ action: 'updateStatus', rowIndex: rowIndex, status: status });
+    }
+  </script>
+</body>
+</html>
