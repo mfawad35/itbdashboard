@@ -902,7 +902,7 @@
                     ${pending > 0 ? `
                       <button class="btn btn-sm btn-success me-1" onclick="payJobFull(${row.rowIndex}, ${pending})">💵 Full Pay</button>
                       <button class="btn btn-sm btn-outline-success me-1" onclick="payJobPartial(${row.rowIndex}, ${pending})">✏️ Partial</button>
-                      <button class="btn btn-sm btn-outline-success me-1" onclick="sendWhatsAppReminder('${custName.replace(/'/g, "\\'")}', '${jobDesc.replace(/'/g, "\\'")}', ${pending})">💬 WA</button>
+                      <button class="btn btn-sm btn-outline-success me-1" onclick="sendWhatsAppReminderByRow(${row.rowIndex})">💬 WA</button>
                     ` : ''}
                     <button class="btn btn-ghost-primary btn-icon btn-sm" onclick="openEditJobModal(${row.rowIndex})">✏️ Edit</button>
                   </div>
@@ -941,7 +941,7 @@
                     <button class="btn btn-sm btn-success me-1" onclick="payJobFull(${row.rowIndex}, ${pending})">💵 Full Pay</button>
                     <button class="btn btn-sm btn-outline-success me-1" onclick="payJobPartial(${row.rowIndex}, ${pending})">✏️ Partial Pay</button>
                     <button class="btn btn-sm btn-outline-primary me-1" onclick="openEditJobModal(${row.rowIndex})">⚙️ Edit</button>
-                    <button class="btn btn-sm btn-success me-1" onclick="sendWhatsAppReminder('${custName.replace(/'/g, "\\'")}', '${jobDesc.replace(/'/g, "\\'")}', ${pending})">💬 WhatsApp</button>
+                    <button class="btn btn-sm btn-success me-1" onclick="sendWhatsAppReminderByRow(${row.rowIndex})">💬 WhatsApp</button>
                   </div>
                 </td>
               </tr>
@@ -1539,14 +1539,54 @@ ${achievement}
       sendToSheet({ action: 'updateStatus', rowIndex: rowIndex, status: status });
     }
 
+    function sendWhatsAppReminderByRow(rowIndex) {
+      const item = globalData.jobs.find(j => j.rowIndex === rowIndex);
+      if (!item) return;
+
+      const custName = item["Customer Name"] || 'Customer';
+      const jobDesc = item["Job Description"] || 'Order';
+      const total = parseFloat(item["Total Amount"]) || 0;
+      const paid = parseFloat(item["Amount Paid"]) || 0;
+      const pendingAmount = parseFloat(item["Pending Cash"]) || (total - paid);
+
+      sendWhatsAppReminder(custName, jobDesc, pendingAmount);
+    }
+
     function sendWhatsAppReminder(customerName, jobDesc, pendingAmount) {
       const formattedPending = pendingAmount.toLocaleString('en-PK');
       const message = `Assalam-o-Alaikum ${customerName},\n\nYeh IT Brothers ki taraf se aap ke order (*${jobDesc}*) ke baqaya waajibat ki aik tazkeer (reminder) hai.\n\nBaqaya Rakam: *Rs. ${formattedPending}*\n\nBaraye meherbani yeh baqaya rakam jald se jald ada kar dein. Shukriya!\n\nIT Brothers`;
 
       const encodedMsg = encodeURIComponent(message);
-      const waUrl = `https://api.whatsapp.com/send?text=${encodedMsg}`;
 
-      window.open(waUrl, '_blank');
+      // Clipboard Backup (Ensures message is saved even if desktop browser blocks popup)
+      try {
+        const tempInput = document.createElement("textarea");
+        tempInput.value = message;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand("copy");
+        document.body.removeChild(tempInput);
+      } catch (err) {
+        console.warn("Could not copy reminder message to clipboard:", err);
+      }
+
+      const waUrl = `https://wa.me/?text=${encodedMsg}`;
+
+      // Create an anchor tag to trigger link navigation (bypasses window.open popup blockers in WebViews)
+      const link = document.createElement('a');
+      link.href = waUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      
+      try {
+        link.click();
+      } catch (e) {
+        console.error("Link click failed:", e);
+        window.open(waUrl, '_blank');
+      }
+      
+      setTimeout(() => document.body.removeChild(link), 100);
     }
   </script>
 </body>
