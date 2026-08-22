@@ -43,7 +43,9 @@
             <img src="logo.png" alt="IT Brothers" style="height: 40px; width: auto; object-fit: contain;" class="me-2" onerror="this.src='https://via.placeholder.com/150x40?text=IT+Brothers'">
             <div>
               <h1 class="navbar-brand navbar-brand-autodark m-0 p-0 fs-2 text-primary fw-bold">IT Brothers Operations Dashboard</h1>
-              <div id="live-datetime" class="text-muted small fw-medium" style="font-size: 0.8rem;"></div>
+              <div class="d-flex align-items-center gap-2">
+                <div id="live-datetime" class="text-muted small fw-medium" style="font-size: 0.8rem;"></div>
+              </div>
             </div>
           </div>
           
@@ -338,12 +340,12 @@
 
           <div class="mb-3">
             <label class="form-label">Today's Achievement</label>
-            <input type="text" id="rpt-achievement" class="form-control" placeholder="e.g. Completed banner batch" oninput="compileAdvisorReport()">
+            <input type="text" id="rpt-achievement" class="form-control" placeholder="e.g. Banner batch completed successfully" oninput="compileAdvisorReport()">
           </div>
 
-          <div class="hr-text my-2">Generated Report Output</div>
+          <div class="hr-text my-2">Generated Report Output (English)</div>
           <div class="mb-3">
-            <textarea id="rpt-output" class="form-control font-monospace" rows="14" readonly></textarea>
+            <textarea id="rpt-output" class="form-control font-monospace" rows="15" readonly></textarea>
           </div>
         </div>
         <div class="modal-footer">
@@ -786,11 +788,11 @@
       const end = document.getElementById('range-end-date').value;
       
       if (!start || !end) {
-        alert("Please select both From and To dates!");
+        alert("Pleease Tareekh (From aur To) donon muntakhab karen!");
         return;
       }
       if (start > end) {
-        alert("Start date cannot be after end date!");
+        alert("Pehli tareekh baad wali tareekh se bari nahi ho sakti!");
         return;
       }
       
@@ -900,6 +902,7 @@
                     ${pending > 0 ? `
                       <button class="btn btn-sm btn-success me-1" onclick="payJobFull(${row.rowIndex}, ${pending})">💵 Full Pay</button>
                       <button class="btn btn-sm btn-outline-success me-1" onclick="payJobPartial(${row.rowIndex}, ${pending})">✏️ Partial</button>
+                      <button class="btn btn-sm btn-outline-success me-1" onclick="sendWhatsAppReminder('${custName.replace(/'/g, "\\'")}', '${jobDesc.replace(/'/g, "\\'")}', ${pending})">💬 WA</button>
                     ` : ''}
                     <button class="btn btn-ghost-primary btn-icon btn-sm" onclick="openEditJobModal(${row.rowIndex})">✏️ Edit</button>
                   </div>
@@ -937,7 +940,8 @@
                   <div class="btn-list flex-nowrap">
                     <button class="btn btn-sm btn-success me-1" onclick="payJobFull(${row.rowIndex}, ${pending})">💵 Full Pay</button>
                     <button class="btn btn-sm btn-outline-success me-1" onclick="payJobPartial(${row.rowIndex}, ${pending})">✏️ Partial Pay</button>
-                    <button class="btn btn-sm btn-outline-primary" onclick="openEditJobModal(${row.rowIndex})">⚙️ Edit</button>
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="openEditJobModal(${row.rowIndex})">⚙️ Edit</button>
+                    <button class="btn btn-sm btn-success me-1" onclick="sendWhatsAppReminder('${custName.replace(/'/g, "\\'")}', '${jobDesc.replace(/'/g, "\\'")}', ${pending})">💬 WhatsApp</button>
                   </div>
                 </td>
               </tr>
@@ -1080,7 +1084,6 @@
         modalInstance.hide();
       }
 
-      // Cleanup lingering backdrop elements & scroll locks after CSS transition completes
       setTimeout(() => {
         document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
         document.body.classList.remove('modal-open');
@@ -1095,13 +1098,13 @@
       const jobDesc = item ? item["Job Description"] || '' : '';
 
       const isCOD = confirm(
-        `Order Balance: Rs. ${pendingAmount.toLocaleString('en-PK')}\n\n` +
-        `Click "OK" for ONLINE (COD) Order\n` +
-        `Click "Cancel" for BY-HAND / WALK-IN Order`
+        `Order Ka Baqaya: Rs. ${pendingAmount.toLocaleString('en-PK')}\n\n` +
+        `Online COD Order ke liye "OK" dabayein.\n` +
+        `By-Hand / Walk-In Order ke liye "Cancel" dabayein.`
       );
 
       if (isCOD) {
-        const feeStr = prompt(`Enter COD / Courier fee deducted by shipping service (Enter 0 if none):`, "0");
+        const feeStr = prompt(`Courier ya COD fee jo service ne kati hai wo enter karein (Agar koi fee nahi hai toh 0 likhein):`, "0");
         if (feeStr === null) return;
         
         const codFee = parseFloat(feeStr) || 0;
@@ -1131,7 +1134,7 @@
         Promise.all(requests).then(() => fetchDashboardData());
 
       } else {
-        if (confirm(`Confirm receiving FULL payment of Rs. ${pendingAmount.toLocaleString('en-PK')} in cash/by-hand?`)) {
+        if (confirm(`Kya aap ko Rs. ${pendingAmount.toLocaleString('en-PK')} ki poori adayegee (Full Payment) mosool ho gayi hai?`)) {
           sendToSheet({ 
             action: "updatePayment", 
             rowIndex: rowIndex, 
@@ -1143,12 +1146,12 @@
     }
 
     function payJobPartial(rowIndex, pendingAmount) {
-      const amountStr = prompt(`Enter payment amount received (Max pending: Rs. ${pendingAmount}):`);
+      const amountStr = prompt(`Mosool shuda rakam enter karein (Max baqaya: Rs. ${pendingAmount}):`);
       if (!amountStr) return;
       
       const amount = parseFloat(amountStr);
       if (isNaN(amount) || amount <= 0 || amount > pendingAmount) {
-        alert("Please enter a valid amount!");
+        alert("Baraye meherbani sahi rakam enter karein!");
         return;
       }
 
@@ -1196,7 +1199,7 @@
       const expPersonalOther = document.getElementById('rpt-exp-personal-other')?.value || "0";
 
       const pendingNotes = document.getElementById('rpt-pending-notes')?.value.trim() || "";
-      const achievement = document.getElementById('rpt-achievement')?.value || "None";
+      const achievement = document.getElementById('rpt-achievement')?.value || "No special achievement";
 
       const tiktok = document.getElementById('rpt-mkt-tiktok')?.value || 0;
       const reels = document.getElementById('rpt-mkt-reels')?.value || 0;
@@ -1211,7 +1214,7 @@
 
       let completedJobsText = (completedJobsSummary.length > 0)
         ? completedJobsSummary.map(j => `  * ${j.title} - Qty: ${j.qty} (Price: Rs. ${j.price.toLocaleString('en-PK')})`).join('\n')
-        : "  * None completed today";
+        : "  * No jobs completed today";
 
       let totalPendingSum = 0;
       let pendingDetailsLines = [];
@@ -1223,63 +1226,67 @@
         });
       }
 
-      let pendingReportBlock = `Total Outstanding: Rs. ${totalPendingSum.toLocaleString('en-PK')}`;
+      let pendingReportBlock = `Total Outstanding Payments: Rs. ${totalPendingSum.toLocaleString('en-PK')}`;
       if (pendingDetailsLines.length > 0) {
         pendingReportBlock += `\n${pendingDetailsLines.join('\n')}`;
       } else {
         pendingReportBlock += `\n  * No pending receivables`;
       }
       if (pendingNotes) {
-        pendingReportBlock += `\nNote: ${pendingNotes}`;
+        pendingReportBlock += `\nDetails / Notes: ${pendingNotes}`;
       }
 
       const textReport = 
-`📅 ${formattedDate}    
+`🖥️ IT BROTHERS - DAILY OPERATIONS REPORT
+📅 Date: ${formattedDate}
+
 💰 Income
-Shop Sales: ${computedSelectedSales}
-Foreign Client Income: ${foreignInc} 
+Shop Sales: Rs. ${computedSelectedSales.toLocaleString('en-PK')}
+Foreign Client Income: Rs. ${parseFloat(foreignInc).toLocaleString('en-PK')} 
 
 🏪 Business Expenses
-Employee wages: ${wagesText}
-Materials: ${materialsText} 
-Equipment / Maintenance: ${equipmentText} 
-Other: ${otherExpText} 
+Employee Wages: ${wagesText}
+Raw Materials: ${materialsText} 
+Machinery / Maintenance: ${equipmentText} 
+Other Expenses: ${otherExpText} 
 
 🏠 Personal Expenses
-Home: ${expHome}
-Food: ${expFood}
-Charity: ${expCharity}
-Other: ${expPersonalOther}
+Home Expense: Rs. ${parseFloat(expHome).toLocaleString('en-PK')}
+Food / Groceries: ${expFood}
+Charity / Sadqah: Rs. ${parseFloat(expCharity).toLocaleString('en-PK')}
+Other Personal Expenses: ${expPersonalOther}
 
 💼 Committee Savings
-Monthly Contribution: Rs. 10,000
-Duration: 15 months
+Monthly Committee: Rs. 10,000
+Duration: 15 Months
 Members: 15
 
-📱 Marketing
-TikTok: ${tiktok} 
-Facebook Reels: ${reels} 
-Facebook Posts: ${fbposts}
+📱 Marketing (Social Media)
+TikTok Posts: ${tiktok} 
+FB Reels: ${reels} 
+FB Posts: ${fbposts}
 
-📦 Orders
-What jobs were completed?
+📦 Completed Orders
 ${completedJobsText}
  
-📞 Customer Source
+📞 Customer Sources
 Walk-in: ${walkin} 
-WhatsApp Status: ${whatsapp}
+WhatsApp: ${whatsapp}
 Facebook: ${srcFb}
 TikTok: ${srcTikTok}
 Referral: ${srcReferral}
 Repeat Customer: ${srcRepeat}  
 
-📦 Pending Payments
+📦 Outstanding Payments
 ${pendingReportBlock}
 
-💵 Cash Remaining: Rs.${cashRem} 
+💵 Cash Remaining: Rs. ${parseFloat(cashRem).toLocaleString('en-PK')} 
 
 ⭐ Today's Achievement
-${achievement}`;
+${achievement}
+
+----------------------------------------
+✨ Generated via IT Brothers System`;
 
       const rptOutput = document.getElementById('rpt-output');
       if (rptOutput) rptOutput.value = textReport;
@@ -1313,7 +1320,7 @@ ${achievement}`;
       const instructions = instructionsInput?.value.trim() || '';
       
       if (!customer && !job) {
-        alert("Please enter a customer name or job description!");
+        alert("Baraye meherbani Grahak ka naam ya Kaam ki tafseel enter karein!");
         return;
       }
 
@@ -1530,6 +1537,16 @@ ${achievement}`;
 
     function updateJobStatus(rowIndex, status) {
       sendToSheet({ action: 'updateStatus', rowIndex: rowIndex, status: status });
+    }
+
+    function sendWhatsAppReminder(customerName, jobDesc, pendingAmount) {
+      const formattedPending = pendingAmount.toLocaleString('en-PK');
+      const message = `Assalam-o-Alaikum ${customerName},\n\nYeh IT Brothers ki taraf se aap ke order (*${jobDesc}*) ke baqaya waajibat ki aik tazkeer (reminder) hai.\n\nBaqaya Rakam: *Rs. ${formattedPending}*\n\nBaraye meherbani yeh baqaya rakam jald se jald ada kar dein. Shukriya!\n\nIT Brothers`;
+
+      const encodedMsg = encodeURIComponent(message);
+      const waUrl = `https://api.whatsapp.com/send?text=${encodedMsg}`;
+
+      window.open(waUrl, '_blank');
     }
   </script>
 </body>
