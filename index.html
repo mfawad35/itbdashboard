@@ -26,6 +26,13 @@
       padding-bottom: 10px;
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
     }
+    /* Toast Notification Styling */
+    .toast-container-custom {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 9999;
+    }
   </style>
 </head>
 
@@ -33,6 +40,9 @@
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbzNtkplZTaCjRiRHofsfIgGINhX3W2ZF0HgV6xHdG0JzsLi8I8KbwG-dpH2TY_DtKa3/exec";
   </script>
+
+  <!-- Toast Container for Non-blocking Alerts -->
+  <div class="toast-container-custom" id="toast-container"></div>
 
   <div class="page">
     <!-- 📌 STICKY TOP HEADER WRAPPER -->
@@ -55,18 +65,8 @@
             <input type="date" id="selected-dashboard-date" class="form-control form-control-sm" onchange="onDateFilterChange()" style="width: auto;">
             <button onclick="resetToToday()" class="btn btn-sm btn-outline-secondary" id="btn-today">Today</button>
             <button onclick="filterThisMonth()" class="btn btn-sm btn-outline-warning" id="btn-month">This Month</button>
-            <button onclick="toggleCustomRange()" class="btn btn-sm btn-outline-primary" id="btn-range-toggle">📅 Custom Range</button>
+            <button onclick="openCustomRangeModal()" class="btn btn-sm btn-outline-primary" id="btn-range-toggle">📅 Custom Range</button>
             <button onclick="showAllDates()" class="btn btn-sm btn-outline-info" id="btn-alldates">All Dates</button>
-          </div>
-
-          <!-- Custom From-To Date Range Selector -->
-          <div class="d-none align-items-center gap-2 my-2 my-md-0 me-md-3 p-2 bg-white rounded border shadow-sm" id="custom-range-bar">
-            <span class="fw-bold text-muted small">From:</span>
-            <input type="date" id="range-start-date" class="form-control form-control-sm" style="width: auto;">
-            <span class="fw-bold text-muted small">To:</span>
-            <input type="date" id="range-end-date" class="form-control form-control-sm" style="width: auto;">
-            <button onclick="applyCustomRange()" class="btn btn-sm btn-primary">Apply</button>
-            <button onclick="cancelCustomRange()" class="btn btn-sm btn-ghost-secondary">Cancel</button>
           </div>
 
           <div class="navbar-nav flex-row order-md-last ms-auto gap-2">
@@ -249,6 +249,43 @@
   </div>
 
   <!-- MODAL FOR GENERATING ADVISOR REPORT -->
+  <div class="modal modal-blur fade" id="modal-custom-range" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-primary-lt">
+          <h5 class="modal-title text-primary fw-bold">📅 Select Custom Date Range</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <!-- Quick Presets -->
+          <div class="mb-3 text-center">
+            <label class="form-label text-muted small fw-bold">Quick Presets:</label>
+            <div class="btn-group w-100" role="group">
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setPresetRange('yesterday')">Yesterday</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setPresetRange('last7')">Last 7 Days</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setPresetRange('thisMonth')">This Month</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setPresetRange('lastMonth')">Last Month</button>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-6 mb-3">
+              <label class="form-label fw-bold">From Date</label>
+              <input type="date" id="range-start-date" class="form-control">
+            </div>
+            <div class="col-6 mb-3">
+              <label class="form-label fw-bold">To Date</label>
+              <input type="date" id="range-end-date" class="form-control">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn me-auto btn-ghost-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" onclick="applyCustomRange()" class="btn btn-primary">Apply Filter</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal modal-blur fade" id="modal-advisor-report" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
       <div class="modal-content">
@@ -356,6 +393,122 @@
     </div>
   </div>
 
+  <!-- MODAL FOR WHATSAPP REMINDER (DESKTOP APP & WEB COMPATIBLE) -->
+  <div class="modal modal-blur fade" id="modal-whatsapp-share" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-success-lt">
+          <h5 class="modal-title text-success fw-bold">💬 Send WhatsApp Reminder</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-success d-flex align-items-center mb-3" role="alert">
+            <div><strong>Message copied to clipboard!</strong> Choose how you'd like to open WhatsApp below:</div>
+          </div>
+          <div class="mb-2 small fw-bold text-muted" id="wa-share-number-info"></div>
+          <div class="mb-3">
+            <label class="form-label text-muted small fw-bold">Message Preview:</label>
+            <textarea id="wa-share-text" class="form-control font-monospace" rows="5"></textarea>
+          </div>
+          <div class="d-grid gap-2">
+            <a id="btn-wa-desktop-app" href="#" class="btn btn-success btn-lg text-white">
+              💻 Launch WhatsApp Desktop App
+            </a>
+            <a id="btn-wa-web" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-outline-success">
+              🌐 Open WhatsApp Web
+            </a>
+            <a id="btn-wa-direct" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-outline-secondary">
+              📱 Open Mobile / Standard Link (wa.me)
+            </a>
+            <button onclick="copyWaTextManual()" class="btn btn-outline-primary">
+              📋 Copy Message Text Again
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL FOR CUSTOM PAYMENT SELECTION (REPLACES PROMPT & CONFIRM) -->
+  <div class="modal modal-blur fade" id="modal-payment-action" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-success-lt">
+          <h5 class="modal-title text-success fw-bold">💵 Record Payment Transaction</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="pay-modal-rowindex">
+          <input type="hidden" id="pay-modal-pending-amt">
+
+          <div class="card mb-3 bg-light border-0">
+            <div class="card-body p-3">
+              <div class="text-muted small">Customer & Work Order:</div>
+              <div class="fw-bold fs-3 text-dark" id="pay-modal-customer-info">Customer Name</div>
+              <div class="text-danger fw-bold mt-1">Pending Amount: <span id="pay-modal-pending-display">Rs. 0</span></div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">Select Payment Option:</label>
+            <div class="form-selectgroup form-selectgroup-boxes d-flex flex-column gap-2">
+              <label class="form-selectgroup-item flex-fill">
+                <input type="radio" name="payment-type-radio" value="full-hand" class="form-selectgroup-input" checked onchange="togglePaymentInputs()">
+                <div class="form-selectgroup-label d-flex align-items-center p-3">
+                  <span class="me-3 fs-2">💵</span>
+                  <div class="text-start">
+                    <div class="font-weight-medium">Full Payment (By Hand / Walk-in)</div>
+                    <div class="text-muted small">Customer is paying full remaining balance in cash directly.</div>
+                  </div>
+                </div>
+              </label>
+
+              <label class="form-selectgroup-item flex-fill">
+                <input type="radio" name="payment-type-radio" value="full-cod" class="form-selectgroup-input" onchange="togglePaymentInputs()">
+                <div class="form-selectgroup-label d-flex align-items-center p-3">
+                  <span class="me-3 fs-2">📦</span>
+                  <div class="text-start">
+                    <div class="font-weight-medium">Online COD (Courier Delivery)</div>
+                    <div class="text-muted small">Collected via courier. Deduct courier / processing fee if applicable.</div>
+                  </div>
+                </div>
+              </label>
+
+              <label class="form-selectgroup-item flex-fill">
+                <input type="radio" name="payment-type-radio" value="partial" class="form-selectgroup-input" onchange="togglePaymentInputs()">
+                <div class="form-selectgroup-label d-flex align-items-center p-3">
+                  <span class="me-3 fs-2">✏️</span>
+                  <div class="text-start">
+                    <div class="font-weight-medium">Partial Payment</div>
+                    <div class="text-muted small">Customer is paying a portion of the pending cash now.</div>
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Extra Input: COD Fee -->
+          <div class="mb-3 d-none" id="pay-input-cod-group">
+            <label class="form-label text-warning fw-bold">Courier / Service Fee Deducted (Rs.)</label>
+            <input type="number" id="pay-cod-fee" class="form-control" value="0" min="0" placeholder="e.g. 150 (Leave 0 if none)">
+            <small class="text-muted">This fee will automatically be recorded under Expenses (Other).</small>
+          </div>
+
+          <!-- Extra Input: Partial Amount -->
+          <div class="mb-3 d-none" id="pay-input-partial-group">
+            <label class="form-label text-primary fw-bold">Amount Received Now (Rs.)</label>
+            <input type="number" id="pay-partial-amount" class="form-control" placeholder="Enter amount">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn me-auto btn-ghost-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" onclick="confirmPaymentSubmit()" class="btn btn-success">Save Payment</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- MODALS FOR ADDING -->
   <div class="modal modal-blur fade" id="modal-add-job" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
@@ -366,11 +519,15 @@
         </div>
         <div class="modal-body">
           <div class="row">
-            <div class="col-lg-5 mb-3">
+            <div class="col-lg-4 mb-3">
               <label class="form-label">Customer Name</label>
               <input type="text" id="input-customer" class="form-control" placeholder="e.g. Ali Khan">
             </div>
-            <div class="col-lg-5 mb-3">
+            <div class="col-lg-3 mb-3">
+              <label class="form-label">WhatsApp Number</label>
+              <input type="tel" id="input-whatsapp" class="form-control" placeholder="e.g. 0300-1234567">
+            </div>
+            <div class="col-lg-3 mb-3">
               <label class="form-label">Job Description</label>
               <input type="text" id="input-job" class="form-control" placeholder="e.g. Banner Printing 6x3">
             </div>
@@ -513,9 +670,13 @@
               <label class="form-label">Date</label>
               <input type="date" id="edit-job-date" class="form-control">
             </div>
-            <div class="col-lg-4 mb-3">
+            <div class="col-lg-3 mb-3">
               <label class="form-label">Customer Name</label>
               <input type="text" id="edit-job-customer" class="form-control">
+            </div>
+            <div class="col-lg-3 mb-3">
+              <label class="form-label">WhatsApp Number</label>
+              <input type="tel" id="edit-job-whatsapp" class="form-control" placeholder="e.g. 0300-1234567">
             </div>
             <div class="col-lg-3 mb-3">
               <label class="form-label">Job Description</label>
@@ -654,7 +815,6 @@
   </div>
 
   <!-- BOOTSTRAP JS & TABLER JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/js/tabler.min.js"></script>
 
   <script>
@@ -670,12 +830,48 @@
     let rangeStartDateVal = '';
     let rangeEndDateVal = '';
 
+    // Non-blocking Toast Notification Helper
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const bgClass = type === 'success' ? 'bg-success text-white' : 
+                     type === 'danger' ? 'bg-danger text-white' : 
+                     type === 'warning' ? 'bg-warning text-dark' : 'bg-dark text-white';
+
+      const toastEl = document.createElement('div');
+      toastEl.className = `toast align-items-center ${bgClass} border-0 show mb-2 shadow`;
+      toastEl.setAttribute('role', 'alert');
+      toastEl.innerHTML = `
+        <div class="d-flex">
+          <div class="toast-body fw-bold">${message}</div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+      `;
+      container.appendChild(toastEl);
+      setTimeout(() => {
+        toastEl.remove();
+      }, 4000);
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('selected-dashboard-date').value = selectedDateVal;
       fetchDashboardData();
       setInterval(fetchDashboardData, 30000);
       updateLiveDateTime();
       setInterval(updateLiveDateTime, 1000);
+
+      // Clean up stranded modal backdrops safely without corrupting Bootstrap's active transition state
+      document.addEventListener('hidden.bs.modal', () => {
+        setTimeout(() => {
+          if (!document.querySelector('.modal.show')) {
+            document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
+          }
+        }, 150);
+      });
     });
 
     async function fetchDashboardData() {
@@ -683,10 +879,14 @@
       if(btn) btn.innerText = "⏳ Loading...";
       try {
         const res = await fetch(API_URL);
-        globalData = await res.json();
-        renderDashboard(globalData);
+        const data = await res.json();
+        if (data && typeof data === 'object') {
+          globalData = data;
+          renderDashboard(globalData);
+        }
       } catch (e) {
         console.error("Error fetching data:", e);
+        showToast("⚠️ Could not sync with Google Sheet server. Check internet connection.", "warning");
       } finally {
         if(btn) btn.innerText = "🔄 Refresh Data";
       }
@@ -758,29 +958,51 @@
       rangeStartDateVal = `${year}-${month}-01`;
       rangeEndDateVal = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
       
-      const startEl = document.getElementById('range-start-date');
-      const endEl = document.getElementById('range-end-date');
-      if (startEl) startEl.value = rangeStartDateVal;
-      if (endEl) endEl.value = rangeEndDateVal;
-      
       currentFilterMode = 'range';
       renderDashboard(globalData);
     }
 
-    function toggleCustomRange() {
-      const rangeBar = document.getElementById('custom-range-bar');
-      if (rangeBar) {
-        if (rangeBar.classList.contains('d-none')) {
-          rangeBar.classList.remove('d-none');
-          rangeBar.classList.add('d-flex');
-          if (!rangeStartDateVal) {
-            filterThisMonth();
-          }
-        } else {
-          rangeBar.classList.remove('d-flex');
-          rangeBar.classList.add('d-none');
-        }
+    function openCustomRangeModal() {
+      if (!rangeStartDateVal || !rangeEndDateVal) {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+        rangeStartDateVal = `${year}-${month}-01`;
+        rangeEndDateVal = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
       }
+
+      const startEl = document.getElementById('range-start-date');
+      const endEl = document.getElementById('range-end-date');
+      if (startEl) startEl.value = rangeStartDateVal;
+      if (endEl) endEl.value = rangeEndDateVal;
+
+      const modalEl = document.getElementById('modal-custom-range');
+      bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+
+    function setPresetRange(type) {
+      const now = new Date();
+      let start = new Date();
+      let end = new Date();
+
+      if (type === 'yesterday') {
+        start.setDate(now.getDate() - 1);
+        end.setDate(now.getDate() - 1);
+      } else if (type === 'last7') {
+        start.setDate(now.getDate() - 6);
+      } else if (type === 'thisMonth') {
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      } else if (type === 'lastMonth') {
+        start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        end = new Date(now.getFullYear(), now.getMonth(), 0);
+      }
+
+      const startEl = document.getElementById('range-start-date');
+      const endEl = document.getElementById('range-end-date');
+      if (startEl) startEl.value = getLocalDateString(start);
+      if (endEl) endEl.value = getLocalDateString(end);
     }
 
     function applyCustomRange() {
@@ -788,29 +1010,24 @@
       const end = document.getElementById('range-end-date').value;
       
       if (!start || !end) {
-        alert("Pleease Tareekh (From aur To) donon muntakhab karen!");
+        showToast("Please Tareekh (From aur To) donon muntakhab karen!", "warning");
         return;
       }
       if (start > end) {
-        alert("Pehli tareekh baad wali tareekh se bari nahi ho sakti!");
+        showToast("Pehli tareekh baad wali tareekh se bari nahi ho sakti!", "danger");
         return;
       }
       
       rangeStartDateVal = start;
       rangeEndDateVal = end;
       currentFilterMode = 'range';
+
+      closeModal('modal-custom-range');
       renderDashboard(globalData);
     }
 
-    function cancelCustomRange() {
-      const rangeBar = document.getElementById('custom-range-bar');
-      if (rangeBar) {
-        rangeBar.classList.remove('d-flex');
-        rangeBar.classList.add('d-none');
-      }
-    }
-
     function renderDashboard(data) {
+      if (!data) data = { jobs: [], sales: [], expenses: [] };
       let totalSales = 0;
       let totalPending = 0;
       let activeJobs = 0;
@@ -900,8 +1117,7 @@
                 <td>
                   <div class="btn-list flex-nowrap">
                     ${pending > 0 ? `
-                      <button class="btn btn-sm btn-success me-1" onclick="payJobFull(${row.rowIndex}, ${pending})">💵 Full Pay</button>
-                      <button class="btn btn-sm btn-outline-success me-1" onclick="payJobPartial(${row.rowIndex}, ${pending})">✏️ Partial</button>
+                      <button class="btn btn-sm btn-success me-1" onclick="openPaymentModal(${row.rowIndex}, 'full')">💵 Pay</button>
                       <button class="btn btn-sm btn-outline-success me-1" onclick="sendWhatsAppReminderByRow(${row.rowIndex})">💬 WA</button>
                     ` : ''}
                     <button class="btn btn-ghost-primary btn-icon btn-sm" onclick="openEditJobModal(${row.rowIndex})">✏️ Edit</button>
@@ -938,8 +1154,7 @@
                 </td>
                 <td>
                   <div class="btn-list flex-nowrap">
-                    <button class="btn btn-sm btn-success me-1" onclick="payJobFull(${row.rowIndex}, ${pending})">💵 Full Pay</button>
-                    <button class="btn btn-sm btn-outline-success me-1" onclick="payJobPartial(${row.rowIndex}, ${pending})">✏️ Partial Pay</button>
+                    <button class="btn btn-sm btn-success me-1" onclick="openPaymentModal(${row.rowIndex}, 'full')">💵 Pay</button>
                     <button class="btn btn-sm btn-outline-primary me-1" onclick="openEditJobModal(${row.rowIndex})">⚙️ Edit</button>
                     <button class="btn btn-sm btn-success me-1" onclick="sendWhatsAppReminderByRow(${row.rowIndex})">💬 WhatsApp</button>
                   </div>
@@ -1058,7 +1273,7 @@
       document.getElementById('expense-table-body').innerHTML = expenseRowsHtml || '<tr><td colspan="6" class="text-center text-muted">No expenses recorded for selected view</td></tr>';
     }
 
-    function sendToSheet(payload) {
+    function sendToSheet(payload, skipRefresh = false) {
       return fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -1066,12 +1281,14 @@
       })
       .then(res => res.json())
       .then(data => {
-        fetchDashboardData();
+        showToast("✅ Changes saved to Google Sheet!", "success");
+        if (!skipRefresh) fetchDashboardData();
         return data;
       })
       .catch(err => {
         console.error("Backend error:", err);
-        fetchDashboardData();
+        showToast("⚠️ Operation saved locally / Retrying...", "warning");
+        if (!skipRefresh) fetchDashboardData();
       });
     }
 
@@ -1083,84 +1300,112 @@
       if (modalInstance) {
         modalInstance.hide();
       }
-
-      setTimeout(() => {
-        document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
-        document.body.classList.remove('modal-open');
-        document.body.style.removeProperty('overflow');
-        document.body.style.removeProperty('padding-right');
-      }, 350);
     }
 
-    function payJobFull(rowIndex, pendingAmount) {
+    // Interactive Modal for Payment Options (Replaces blocked prompt/confirm dialogs)
+    function openPaymentModal(rowIndex, defaultMode = 'full') {
+      const item = globalData.jobs.find(j => j.rowIndex === rowIndex);
+      if (!item) return;
+
+      const custName = item["Customer Name"] || 'Walk-in';
+      const jobDesc = item["Job Description"] || 'Order';
+      const total = parseFloat(item["Total Amount"]) || 0;
+      const paid = parseFloat(item["Amount Paid"]) || 0;
+      const pendingAmount = parseFloat(item["Pending Cash"]) || (total - paid);
+
+      document.getElementById('pay-modal-rowindex').value = rowIndex;
+      document.getElementById('pay-modal-pending-amt').value = pendingAmount;
+      document.getElementById('pay-modal-customer-info').innerText = `${custName} (${jobDesc})`;
+      document.getElementById('pay-modal-pending-display').innerText = `Rs. ${pendingAmount.toLocaleString('en-PK')}`;
+
+      // Reset inputs
+      document.getElementById('pay-cod-fee').value = "0";
+      document.getElementById('pay-partial-amount').value = pendingAmount.toString();
+
+      // Select default mode radio
+      const radios = document.getElementsByName('payment-type-radio');
+      radios.forEach(r => {
+        if (defaultMode === 'partial' && r.value === 'partial') r.checked = true;
+        else if (defaultMode === 'full' && r.value === 'full-hand') r.checked = true;
+      });
+
+      togglePaymentInputs();
+
+      const modalEl = document.getElementById('modal-payment-action');
+      bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+
+    function togglePaymentInputs() {
+      const selected = document.querySelector('input[name="payment-type-radio"]:checked')?.value;
+      const codGroup = document.getElementById('pay-input-cod-group');
+      const partialGroup = document.getElementById('pay-input-partial-group');
+
+      if (selected === 'full-cod') {
+        codGroup.classList.remove('d-none');
+        partialGroup.classList.add('d-none');
+      } else if (selected === 'partial') {
+        codGroup.classList.add('d-none');
+        partialGroup.classList.remove('d-none');
+      } else {
+        codGroup.classList.add('d-none');
+        partialGroup.classList.add('d-none');
+      }
+    }
+
+    async function confirmPaymentSubmit() {
+      const rowIndex = parseInt(document.getElementById('pay-modal-rowindex').value);
+      const pendingAmount = parseFloat(document.getElementById('pay-modal-pending-amt').value) || 0;
+      const selectedType = document.querySelector('input[name="payment-type-radio"]:checked')?.value;
+
       const item = globalData.jobs.find(j => j.rowIndex === rowIndex);
       const customerName = item ? (item["Customer Name"] || 'Walk-in') : 'Walk-in';
       const jobDesc = item ? item["Job Description"] || '' : '';
 
-      const isCOD = confirm(
-        `Order Ka Baqaya: Rs. ${pendingAmount.toLocaleString('en-PK')}\n\n` +
-        `Online COD Order ke liye "OK" dabayein.\n` +
-        `By-Hand / Walk-In Order ke liye "Cancel" dabayein.`
-      );
+      closeModal('modal-payment-action');
 
-      if (isCOD) {
-        const feeStr = prompt(`Courier ya COD fee jo service ne kati hai wo enter karein (Agar koi fee nahi hai toh 0 likhein):`, "0");
-        if (feeStr === null) return;
-        
-        const codFee = parseFloat(feeStr) || 0;
+      if (selectedType === 'full-hand') {
+        sendToSheet({ 
+          action: "updatePayment", 
+          rowIndex: rowIndex, 
+          amountPaid: pendingAmount, 
+          paymentType: "Full Payment (By-Hand)" 
+        });
+      } else if (selectedType === 'full-cod') {
+        const codFee = parseFloat(document.getElementById('pay-cod-fee').value) || 0;
 
-        const requests = [
-          sendToSheet({ 
-            action: "updatePayment", 
-            rowIndex: rowIndex, 
-            amountPaid: pendingAmount, 
-            paymentType: "Online COD" 
-          })
-        ];
+        await sendToSheet({ 
+          action: "updatePayment", 
+          rowIndex: rowIndex, 
+          amountPaid: pendingAmount, 
+          paymentType: "Online COD" 
+        }, codFee > 0);
 
         if (codFee > 0) {
-          requests.push(
-            sendToSheet({
-              action: 'addExpense',
-              date: getTodayString(),
-              description: `COD Fee: ${customerName} (${jobDesc})`,
-              quantity: 1,
-              category: 'Other',
-              amount: codFee
-            })
-          );
+          await sendToSheet({
+            action: 'addExpense',
+            date: getTodayString(),
+            description: `COD Fee: ${customerName} (${jobDesc})`,
+            quantity: 1,
+            category: 'Other',
+            amount: codFee
+          }, false);
+        } else {
+          fetchDashboardData();
+        }
+      } else if (selectedType === 'partial') {
+        const partAmount = parseFloat(document.getElementById('pay-partial-amount').value) || 0;
+        if (partAmount <= 0 || partAmount > pendingAmount) {
+          showToast("Baraye meherbani sahi rakam enter karein!", "danger");
+          return;
         }
 
-        Promise.all(requests).then(() => fetchDashboardData());
-
-      } else {
-        if (confirm(`Kya aap ko Rs. ${pendingAmount.toLocaleString('en-PK')} ki poori adayegee (Full Payment) mosool ho gayi hai?`)) {
-          sendToSheet({ 
-            action: "updatePayment", 
-            rowIndex: rowIndex, 
-            amountPaid: pendingAmount, 
-            paymentType: "Full Payment (By-Hand)" 
-          });
-        }
+        sendToSheet({ 
+          action: "updatePayment", 
+          rowIndex: rowIndex, 
+          amountPaid: partAmount, 
+          paymentType: "Partial Payment" 
+        });
       }
-    }
-
-    function payJobPartial(rowIndex, pendingAmount) {
-      const amountStr = prompt(`Mosool shuda rakam enter karein (Max baqaya: Rs. ${pendingAmount}):`);
-      if (!amountStr) return;
-      
-      const amount = parseFloat(amountStr);
-      if (isNaN(amount) || amount <= 0 || amount > pendingAmount) {
-        alert("Baraye meherbani sahi rakam enter karein!");
-        return;
-      }
-
-      sendToSheet({ 
-        action: "updatePayment", 
-        rowIndex: rowIndex, 
-        amountPaid: amount, 
-        paymentType: "Partial Payment" 
-      });
     }
 
     function openReportModal() {
@@ -1297,11 +1542,12 @@ ${achievement}
       copyText.select();
       copyText.setSelectionRange(0, 99999);
       navigator.clipboard.writeText(copyText.value);
-      alert("Advisor Report copied to clipboard!");
+      showToast("📋 Advisor Report copied to clipboard!", "success");
     }
 
     async function submitNewJob() {
       const customerInput = document.getElementById('input-customer');
+      const whatsappInput = document.getElementById('input-whatsapp');
       const jobInput = document.getElementById('input-job');
       const qtyInput = document.getElementById('input-qty');
       const totalInput = document.getElementById('input-total');
@@ -1311,6 +1557,7 @@ ${achievement}
       const instructionsInput = document.getElementById('input-instructions');
 
       const customer = customerInput?.value.trim() || '';
+      const whatsapp = whatsappInput?.value.trim() || '';
       const job = jobInput?.value.trim() || '';
       const qty = parseInt(qtyInput?.value) || 1;
       const total = parseFloat(totalInput?.value) || 0;
@@ -1320,13 +1567,14 @@ ${achievement}
       const instructions = instructionsInput?.value.trim() || '';
       
       if (!customer && !job) {
-        alert("Baraye meherbani Grahak ka naam ya Kaam ki tafseel enter karein!");
+        showToast("Baraye meherbani Grahak ka naam ya Kaam ki tafseel enter karein!", "warning");
         return;
       }
 
       closeModal('modal-add-job');
 
       if (customerInput) customerInput.value = '';
+      if (whatsappInput) whatsappInput.value = '';
       if (jobInput) jobInput.value = '';
       if (qtyInput) qtyInput.value = '1';
       if (totalInput) totalInput.value = '';
@@ -1334,31 +1582,28 @@ ${achievement}
       if (instructionsInput) instructionsInput.value = '';
 
       const todayStr = getTodayString();
-      const requests = [
-        sendToSheet({
+      try {
+        await sendToSheet({
           action: "addJob",
           date: todayStr,
-          customer, job, quantity: qty, total, paid, status, priority, instructions
-        })
-      ];
+          customer, whatsapp, job, quantity: qty, total, paid, status, priority, instructions
+        }, paid > 0);
 
-      if (paid > 0) {
-        requests.push(
-          sendToSheet({
+        if (paid > 0) {
+          await sendToSheet({
             action: 'addSale',
             date: todayStr,
             customer: customer || 'Walk-in',
             job: `${job} (Advance Payment)`,
             quantity: qty,
             paid: paid
-          })
-        );
-      }
-
-      try {
-        await Promise.all(requests);
+          }, false);
+        } else {
+          fetchDashboardData();
+        }
       } catch (err) {
         console.error("Error submitting job:", err);
+        fetchDashboardData();
       }
     }
 
@@ -1431,6 +1676,7 @@ ${achievement}
       document.getElementById('edit-job-rowindex').value = rowIndex;
       document.getElementById('edit-job-date').value = getLocalDateString(item["Date"]);
       document.getElementById('edit-job-customer').value = item["Customer Name"] || '';
+      document.getElementById('edit-job-whatsapp').value = item["WhatsApp Number"] || item["WhatsApp"] || item["Phone"] || item["Phone Number"] || '';
       document.getElementById('edit-job-desc').value = item["Job Description"] || '';
       document.getElementById('edit-job-qty').value = item["Quantity"] || item["Qty"] || 1;
       document.getElementById('edit-job-total').value = item["Total Amount"] || 0;
@@ -1475,6 +1721,7 @@ ${achievement}
       const rowIndex = parseInt(document.getElementById('edit-job-rowindex').value);
       const date = document.getElementById('edit-job-date').value;
       const customer = document.getElementById('edit-job-customer').value;
+      const whatsapp = document.getElementById('edit-job-whatsapp').value.trim();
       const job = document.getElementById('edit-job-desc').value;
       const qty = parseInt(document.getElementById('edit-job-qty').value) || 1;
       const total = parseFloat(document.getElementById('edit-job-total').value) || 0;
@@ -1488,7 +1735,7 @@ ${achievement}
       try {
         await sendToSheet({
           action: 'updateJob',
-          rowIndex, date, customer, job, quantity: qty, total, paid, status, priority, instructions
+          rowIndex, date, customer, whatsapp, job, quantity: qty, total, paid, status, priority, instructions
         });
       } catch (err) {
         console.error("Error editing job:", err);
@@ -1539,6 +1786,21 @@ ${achievement}
       sendToSheet({ action: 'updateStatus', rowIndex: rowIndex, status: status });
     }
 
+    // Normalizes a locally-entered WhatsApp number (e.g. "0300-1234567") into
+    // the international digits-only format WhatsApp's links expect (e.g. "923001234567").
+    // Returns '' if no usable number was found.
+    function formatWhatsAppNumber(raw) {
+      if (!raw) return '';
+      let digits = String(raw).replace(/[^\d+]/g, '').replace(/^\+/, '');
+      if (!digits) return '';
+      if (digits.startsWith('0')) {
+        digits = '92' + digits.substring(1); // local Pakistani format -> country code 92
+      } else if (digits.length === 10 && !digits.startsWith('92')) {
+        digits = '92' + digits; // 10-digit number missing both the leading 0 and country code
+      }
+      return digits;
+    }
+
     function sendWhatsAppReminderByRow(rowIndex) {
       const item = globalData.jobs.find(j => j.rowIndex === rowIndex);
       if (!item) return;
@@ -1548,45 +1810,114 @@ ${achievement}
       const total = parseFloat(item["Total Amount"]) || 0;
       const paid = parseFloat(item["Amount Paid"]) || 0;
       const pendingAmount = parseFloat(item["Pending Cash"]) || (total - paid);
+      const rawNumber = item["WhatsApp Number"] || item["WhatsApp"] || item["Phone"] || item["Phone Number"] || '';
+      const waNumber = formatWhatsAppNumber(rawNumber);
 
-      sendWhatsAppReminder(custName, jobDesc, pendingAmount);
+      if (!waNumber) {
+        showToast("⚠️ No WhatsApp number saved for this customer. Opening chat picker instead.", "warning");
+      }
+
+      sendWhatsAppReminder(custName, jobDesc, pendingAmount, waNumber);
     }
 
-    function sendWhatsAppReminder(customerName, jobDesc, pendingAmount) {
-      const formattedPending = pendingAmount.toLocaleString('en-PK');
-      const message = `Assalam-o-Alaikum ${customerName},\n\nYeh IT Brothers ki taraf se aap ke order (*${jobDesc}*) ke baqaya waajibat ki aik tazkeer (reminder) hai.\n\nBaqaya Rakam: *Rs. ${formattedPending}*\n\nBaraye meherbani yeh baqaya rakam jald se jald ada kar dein. Shukriya!\n\nIT Brothers\n📍 Muslimabad Parmoli Tehsil Razzar District Swabi\n🌐 www.itbrothers.pk`;
+    function copyToClipboard(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text).catch(() => oldSchoolCopy(text));
+      }
+      return Promise.resolve(oldSchoolCopy(text));
+    }
 
-      const encodedMsg = encodeURIComponent(message);
-
-      // Clipboard Backup (Ensures message is saved even if desktop browser blocks popup)
+    function oldSchoolCopy(text) {
       try {
         const tempInput = document.createElement("textarea");
-        tempInput.value = message;
+        tempInput.style.position = "fixed";
+        tempInput.style.left = "-9999px";
+        tempInput.style.top = "0";
+        tempInput.value = text;
         document.body.appendChild(tempInput);
+        tempInput.focus();
         tempInput.select();
-        document.execCommand("copy");
+        const ok = document.execCommand("copy");
         document.body.removeChild(tempInput);
-      } catch (err) {
-        console.warn("Could not copy reminder message to clipboard:", err);
-      }
-
-      const waUrl = `https://wa.me/?text=${encodedMsg}`;
-
-      // Create an anchor tag to trigger link navigation (bypasses window.open popup blockers in WebViews)
-      const link = document.createElement('a');
-      link.href = waUrl;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      document.body.appendChild(link);
-      
-      try {
-        link.click();
+        return ok;
       } catch (e) {
-        console.error("Link click failed:", e);
-        window.open(waUrl, '_blank');
+        console.warn("Copy fallback failed:", e);
+        return false;
       }
-      
-      setTimeout(() => document.body.removeChild(link), 100);
+    }
+
+    function triggerProtocolUrl(url) {
+      let iframe = document.getElementById('protocol-launcher-iframe');
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = 'protocol-launcher-iframe';
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+      }
+      iframe.src = url;
+    }
+
+    function sendWhatsAppReminder(customerName, jobDesc, pendingAmount, waNumber = '') {
+      const formattedPending = pendingAmount.toLocaleString('en-PK');
+      const message = `Assalam-o-Alaikum ${customerName},\n\nYeh IT Brothers ki taraf se aap ke order (*${jobDesc}*) ke baqaya waajibat ki aik tazkeer (reminder) hai.\n\nBaqaya Rakam: *Rs. ${formattedPending}*\n\nBaraye meherbani yeh baqaya rakam jald se jald ada kar dein. Shukriya!\n\nIT Brothers`;
+
+      // 1. Copy message text to clipboard immediately
+      copyToClipboard(message);
+
+      const encodedMsg = encodeURIComponent(message);
+      // When a saved WhatsApp number is available, target it directly so no contact
+      // picker is needed. Otherwise fall back to the generic "choose a contact" link.
+      const waProtocolUrl = waNumber
+        ? `whatsapp://send?phone=${waNumber}&text=${encodedMsg}`
+        : `whatsapp://send?text=${encodedMsg}`;
+      const waWebUrl = waNumber
+        ? `https://web.whatsapp.com/send?phone=${waNumber}&text=${encodedMsg}`
+        : `https://web.whatsapp.com/send?text=${encodedMsg}`;
+      const waMeUrl = waNumber
+        ? `https://wa.me/${waNumber}?text=${encodedMsg}`
+        : `https://wa.me/?text=${encodedMsg}`;
+
+      // 2. Populate fallback modal elements
+      const txtArea = document.getElementById('wa-share-text');
+      if (txtArea) txtArea.value = message;
+
+      const numberInfoEl = document.getElementById('wa-share-number-info');
+      if (numberInfoEl) {
+        numberInfoEl.textContent = waNumber
+          ? `Sending to: +${waNumber}`
+          : `No saved number for ${customerName} — pick their chat manually.`;
+      }
+
+      const btnDesktop = document.getElementById('btn-wa-desktop-app');
+      if (btnDesktop) btnDesktop.href = waProtocolUrl;
+
+      const btnWeb = document.getElementById('btn-wa-web');
+      if (btnWeb) btnWeb.href = waWebUrl;
+
+      const btnDirect = document.getElementById('btn-wa-direct');
+      if (btnDirect) btnDirect.href = waMeUrl;
+
+      // 3. Trigger desktop protocol safely via hidden iframe (does NOT freeze or unload page JS context)
+      try {
+        triggerProtocolUrl(waProtocolUrl);
+      } catch (e) {
+        console.log("Protocol launch handled via fallback modal", e);
+      }
+
+      // 4. Show modal as guaranteed fallback for desktop app environments
+      const modalEl = document.getElementById('modal-whatsapp-share');
+      if (modalEl) {
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+      }
+    }
+
+    function copyWaTextManual() {
+      const txtArea = document.getElementById('wa-share-text');
+      if (txtArea) {
+        txtArea.select();
+        copyToClipboard(txtArea.value);
+        showToast("📋 WhatsApp text copied to clipboard!", "success");
+      }
     }
   </script>
 </body>
