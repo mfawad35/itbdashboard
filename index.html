@@ -590,10 +590,10 @@
                   </button>
                 </div>
                 <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
-                  <table class="table card-table table-vcenter table-hover">
+                  <table class="table card-table table-vcenter text-nowrap table-hover">
                     <thead>
                       <tr>
-                        <th>Date</th>
+                        <th style="min-width: 105px; white-space: nowrap;">Date</th>
                         <th>Customer</th>
                         <th>Service / Item</th>
                         <th>Qty</th>
@@ -626,10 +626,10 @@
                   </button>
                 </div>
                 <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
-                  <table class="table card-table table-vcenter table-hover">
+                  <table class="table card-table table-vcenter text-nowrap table-hover">
                     <thead>
                       <tr>
-                        <th>Date</th>
+                        <th style="min-width: 105px; white-space: nowrap;">Date</th>
                         <th>Description</th>
                         <th>Qty</th>
                         <th>Category</th>
@@ -1651,7 +1651,7 @@
 
             salesRowsHtml += `
               <tr>
-                <td><small class="text-muted fw-semibold">${rowDate}</small></td>
+                <td style="white-space: nowrap;"><span class="text-muted small fw-semibold font-monospace">${rowDate}</span></td>
                 <td><div class="fw-bold text-dark">${custName}</div></td>
                 <td><div class="fw-semibold">${serviceItem}</div></td>
                 <td><span class="badge bg-blue-lt fw-bold">${qty}</span></td>
@@ -1701,7 +1701,7 @@
 
             expenseRowsHtml += `
               <tr>
-                <td><small class="text-muted fw-semibold">${rowDate}</small></td>
+                <td style="white-space: nowrap;"><span class="text-muted small fw-semibold font-monospace">${rowDate}</span></td>
                 <td><div class="fw-semibold text-dark">${desc}</div></td>
                 <td><span class="badge bg-blue-lt fw-bold">${qty}</span></td>
                 <td><span class="badge-status badge-notstarted">${row["Category"] || 'Materials'}</span></td>
