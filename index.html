@@ -925,6 +925,15 @@
       return `${year}-${month}-${day}`;
     }
 
+    function cancelCustomRange() {
+      rangeStartDateVal = '';
+      rangeEndDateVal = '';
+      const startEl = document.getElementById('range-start-date');
+      const endEl = document.getElementById('range-end-date');
+      if (startEl) startEl.value = '';
+      if (endEl) endEl.value = '';
+    }
+
     function onDateFilterChange() {
       const val = document.getElementById('selected-dashboard-date').value;
       if (val) {

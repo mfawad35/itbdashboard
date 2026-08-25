@@ -1,0 +1,8 @@
+{
+  "name": "IT Brothers Operations Dashboard",
+  "description": "Operations dashboard for tracking work orders, sales, expenses, and advisor reports for IT Brothers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
