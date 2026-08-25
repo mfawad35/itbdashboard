@@ -4,34 +4,346 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <title>IT Brothers Operations Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/css/tabler.min.css">
 
   <style>
-    .header-logo {
-      height: 40px !important;
-      width: auto !important;
-      object-fit: contain;
+    :root {
+      --tblr-font-sans-serif: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --tblr-primary: #2563eb;
+      --tblr-primary-rgb: 37, 99, 235;
+      --tblr-body-bg: #f8fafc;
+      --tblr-card-border-color: #e2e8f0;
     }
-    .live-datetime {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: #626976;
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #f8fafc;
+      color: #1e293b;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
+
+    .font-monospace {
+      font-family: 'JetBrains Mono', monospace !important;
+    }
+
+    /* Top Sticky Header */
     .top-dashboard-header {
       position: sticky !important;
       top: 0 !important;
-      z-index: 1000 !important;
-      background-color: #f8fafc !important;
-      padding-top: 10px;
-      padding-bottom: 10px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+      z-index: 1020 !important;
+      background: rgba(255, 255, 255, 0.94) !important;
+      backdrop-filter: blur(12px) !important;
+      -webkit-backdrop-filter: blur(12px) !important;
+      border-bottom: 1px solid #e2e8f0 !important;
+      box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.06);
     }
+
+    .header-logo {
+      height: 38px !important;
+      width: auto !important;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+
+    .brand-title {
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #0f172a;
+      font-size: 1.25rem;
+      line-height: 1.2;
+    }
+
+    .live-pulse {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #10b981;
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+      animation: pulse-green 2s infinite;
+    }
+
+    @keyframes pulse-green {
+      0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+      }
+      70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+      }
+      100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+      }
+    }
+
+    /* KPI Stat Cards */
+    .kpi-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 1.25rem;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.2s ease-in-out;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.03);
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px -4px rgba(15, 23, 42, 0.08);
+    }
+
+    .kpi-icon-wrap {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+
+    .kpi-value {
+      font-size: 1.65rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-top: 0.25rem;
+    }
+
+    .kpi-caption {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #64748b;
+    }
+
+    /* Modern Table & Card Styling */
+    .card {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04);
+      background: #ffffff;
+    }
+
+    .card-header {
+      background: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 1rem 1.25rem;
+      border-top-left-radius: 12px !important;
+      border-top-right-radius: 12px !important;
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .table thead th {
+      background: #f8fafc;
+      color: #475569;
+      font-weight: 700;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .table tbody td {
+      padding: 0.75rem 1rem;
+      vertical-align: middle;
+      font-size: 0.875rem;
+      border-bottom: 1px solid #f1f5f9;
+      color: #334155;
+    }
+
+    .table-hover tbody tr:hover {
+      background-color: #f8fafc;
+    }
+
+    /* Modern Status Badges */
+    .badge-status {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.35em 0.75em;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .badge-ready {
+      background: #ecfdf5;
+      color: #047857;
+      border: 1px solid #a7f3d0;
+    }
+
+    .badge-progress {
+      background: #fffbeb;
+      color: #b45309;
+      border: 1px solid #fde68a;
+    }
+
+    .badge-notstarted {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+    }
+
+    .badge-priority-high {
+      background: #fff1f2;
+      color: #be123c;
+      border: 1px solid #fecdd3;
+    }
+
+    .badge-priority-med {
+      background: #fffbeb;
+      color: #b45309;
+      border: 1px solid #fde68a;
+    }
+
+    .badge-priority-low {
+      background: #f0fdf4;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+    }
+
+    /* Date Filter Controls */
+    .filter-group {
+      background: #f1f5f9;
+      padding: 3px;
+      border-radius: 8px;
+      display: inline-flex;
+      gap: 2px;
+    }
+
+    .filter-group .btn {
+      border: none !important;
+      border-radius: 6px !important;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.35rem 0.75rem;
+      color: #475569;
+      background: transparent;
+      transition: all 0.15s ease;
+    }
+
+    .filter-group .btn.active, .filter-group .btn:hover {
+      background: #ffffff !important;
+      color: #0f172a !important;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
+    }
+
+    /* Form and Inputs */
+    .form-control, .form-select {
+      border-radius: 8px;
+      border-color: #cbd5e1;
+      font-size: 0.875rem;
+      padding: 0.5rem 0.75rem;
+    }
+
+    .form-control:focus, .form-select:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+
+    .modal-content {
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      overflow: hidden;
+    }
+
+    .modal-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid #e2e8f0;
+      background: #ffffff;
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+    }
+
+    .modal-footer {
+      padding: 1rem 1.5rem;
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    /* Buttons */
+    .btn {
+      border-radius: 8px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      transition: all 0.15s ease;
+    }
+
+    .btn-primary {
+      background: #2563eb;
+      border-color: #2563eb;
+    }
+
+    .btn-primary:hover {
+      background: #1d4ed8;
+      border-color: #1d4ed8;
+    }
+
+    .btn-success {
+      background: #059669;
+      border-color: #059669;
+    }
+
+    .btn-success:hover {
+      background: #047857;
+      border-color: #047857;
+    }
+
     /* Toast Notification Styling */
     .toast-container-custom {
       position: fixed;
-      bottom: 20px;
-      right: 20px;
+      bottom: 24px;
+      right: 24px;
       z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toast-card {
+      border-radius: 10px;
+      padding: 0.85rem 1.2rem;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateY(20px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
     }
   </style>
 </head>
@@ -47,67 +359,102 @@
   <div class="page">
     <!-- 📌 STICKY TOP HEADER WRAPPER -->
     <div class="top-dashboard-header">       
-      <header class="navbar navbar-expand-md navbar-light d-print-none">
+      <header class="navbar navbar-expand-lg navbar-light d-print-none py-2">
         <div class="container-xl">
-          <div class="d-flex align-items-center me-3">
-            <img src="logo.png" alt="IT Brothers" style="height: 40px; width: auto; object-fit: contain;" class="me-2" onerror="this.src='https://via.placeholder.com/150x40?text=IT+Brothers'">
+          <!-- Brand Logo & Live Indicator -->
+          <div class="d-flex align-items-center me-3 py-1">
+            <img src="logo.png" alt="IT Brothers" class="header-logo me-3" onerror="this.src='https://via.placeholder.com/150x40?text=IT+Brothers'">
             <div>
-              <h1 class="navbar-brand navbar-brand-autodark m-0 p-0 fs-2 text-primary fw-bold">IT Brothers Operations Dashboard</h1>
               <div class="d-flex align-items-center gap-2">
-                <div id="live-datetime" class="text-muted small fw-medium" style="font-size: 0.8rem;"></div>
+                <span class="brand-title">IT Brothers</span>
+                <span class="badge bg-blue-lt text-blue fw-bold px-2 py-0" style="font-size: 0.7rem;">OPERATIONS</span>
+                <span class="live-pulse" title="System Live"></span>
+              </div>
+              <div class="d-flex align-items-center gap-2 mt-1">
+                <div id="live-datetime" class="text-muted small fw-semibold" style="font-size: 0.78rem;"></div>
               </div>
             </div>
           </div>
           
-          <!-- Date Selection Filter Bar -->
-          <div class="d-flex align-items-center gap-2 my-2 my-md-0 me-md-3 flex-wrap">
-            <span class="fw-bold text-muted small">Viewing:</span>
-            <input type="date" id="selected-dashboard-date" class="form-control form-control-sm" onchange="onDateFilterChange()" style="width: auto;">
-            <button onclick="resetToToday()" class="btn btn-sm btn-outline-secondary" id="btn-today">Today</button>
-            <button onclick="filterThisMonth()" class="btn btn-sm btn-outline-warning" id="btn-month">This Month</button>
-            <button onclick="openCustomRangeModal()" class="btn btn-sm btn-outline-primary" id="btn-range-toggle">📅 Custom Range</button>
-            <button onclick="showAllDates()" class="btn btn-sm btn-outline-info" id="btn-alldates">All Dates</button>
+          <!-- Date Selection Filter Bar (Segmented Group) -->
+          <div class="d-flex align-items-center gap-2 my-2 my-lg-0 me-lg-3 flex-wrap">
+            <div class="filter-group">
+              <button onclick="resetToToday()" class="btn btn-sm" id="btn-today">Today</button>
+              <button onclick="filterThisMonth()" class="btn btn-sm" id="btn-month">This Month</button>
+              <button onclick="openCustomRangeModal()" class="btn btn-sm" id="btn-range-toggle">📅 Custom Range</button>
+              <button onclick="showAllDates()" class="btn btn-sm" id="btn-alldates">All Dates</button>
+            </div>
+            <input type="date" id="selected-dashboard-date" class="form-control form-control-sm shadow-none" onchange="onDateFilterChange()" style="width: 140px; font-size: 0.82rem; font-weight: 500;">
           </div>
 
-          <div class="navbar-nav flex-row order-md-last ms-auto gap-2">
-            <button onclick="openReportModal()" class="btn btn-outline-success">📋 Generate Advisor Report</button>
-            <button onclick="fetchDashboardData()" class="btn btn-outline-primary" id="btn-refresh">🔄 Refresh Data</button>
+          <div class="navbar-nav flex-row order-lg-last ms-auto gap-2">
+            <button onclick="openReportModal()" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1 shadow-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="18" height="18" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" /><path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z" /><path d="M9 14l2 2l4 -4" /></svg>
+              <span>Advisor Report</span>
+            </button>
+            <button onclick="fetchDashboardData()" class="btn btn-sm btn-primary d-flex align-items-center gap-1 shadow-sm" id="btn-refresh">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="18" height="18" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" /><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" /></svg>
+              <span>Sync Data</span>
+            </button>
           </div>
         </div>
       </header>
 
       <!-- Top KPI Cards -->
-      <div class="container-xl pt-3 pb-2">
-        <div class="row row-deck row-cards">
+      <div class="container-xl pt-3 pb-3">
+        <div class="row row-cards g-3">
+          <!-- Card 1: Sales -->
           <div class="col-sm-6 col-lg-3">
-            <div class="card">
-              <div class="card-body">
-                <div class="subheader text-success" id="kpi-sales-label">Today's Sales</div>
-                <div class="h1 mb-0 text-success" id="kpi-sales">Rs. 0</div>
+            <div class="kpi-card d-flex align-items-center justify-content-between">
+              <div>
+                <div class="kpi-caption text-success" id="kpi-sales-label">Today's Sales</div>
+                <div class="kpi-value text-dark" id="kpi-sales">Rs. 0</div>
+                <div class="small text-muted mt-1 fw-medium" style="font-size: 0.75rem;">Received revenue</div>
+              </div>
+              <div class="kpi-icon-wrap bg-success-lt text-success">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M17 8v-3a1 1 0 0 0 -1 -1h-10a2 2 0 0 0 0 4h12a1 1 0 0 1 1 1v3m0 4v3a1 1 0 0 1 -1 1h-12a2 2 0 0 1 -2 -2v-12" /><path d="M20 12v4h-4a2 2 0 0 1 0 -4h4" /></svg>
               </div>
             </div>
           </div>
+
+          <!-- Card 2: Pending Cash Due -->
           <div class="col-sm-6 col-lg-3">
-            <div class="card">
-              <div class="card-body">
-                <div class="subheader text-danger">Pending Cash Due</div>
-                <div class="h1 mb-0 text-danger" id="kpi-pending">Rs. 0</div>
+            <div class="kpi-card d-flex align-items-center justify-content-between">
+              <div>
+                <div class="kpi-caption text-danger">Pending Cash Due</div>
+                <div class="kpi-value text-danger" id="kpi-pending">Rs. 0</div>
+                <div class="small text-muted mt-1 fw-medium" style="font-size: 0.75rem;">Total receivables</div>
+              </div>
+              <div class="kpi-icon-wrap bg-danger-lt text-danger">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></svg>
               </div>
             </div>
           </div>
+
+          <!-- Card 3: Active Jobs -->
           <div class="col-sm-6 col-lg-3">
-            <div class="card">
-              <div class="card-body">
-                <div class="subheader text-warning">Active Shop Jobs</div>
-                <div class="h1 mb-0 text-warning" id="kpi-active-jobs">0</div>
+            <div class="kpi-card d-flex align-items-center justify-content-between">
+              <div>
+                <div class="kpi-caption text-warning">Active Shop Jobs</div>
+                <div class="kpi-value text-dark" id="kpi-active-jobs">0</div>
+                <div class="small text-muted mt-1 fw-medium" style="font-size: 0.75rem;">Orders in queue</div>
+              </div>
+              <div class="kpi-icon-wrap bg-warning-lt text-warning">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 10h3v-3l-3.5 -3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1 -3 3l-6 -6a6 6 0 0 1 -8 -8l3.5 3.5" /></svg>
               </div>
             </div>
           </div>
+
+          <!-- Card 4: Expenses -->
           <div class="col-sm-6 col-lg-3">
-            <div class="card">
-              <div class="card-body">
-                <div class="subheader text-secondary" id="kpi-expense-label">Today's Expenses</div>
-                <div class="h1 mb-0 text-secondary" id="kpi-expenses">Rs. 0</div>
+            <div class="kpi-card d-flex align-items-center justify-content-between">
+              <div>
+                <div class="kpi-caption text-secondary" id="kpi-expense-label">Today's Expenses</div>
+                <div class="kpi-value text-dark" id="kpi-expenses">Rs. 0</div>
+                <div class="small text-muted mt-1 fw-medium" style="font-size: 0.75rem;">Outflow / purchases</div>
+              </div>
+              <div class="kpi-icon-wrap bg-secondary-lt text-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 17l6 -6l4 4l8 -8" /><path d="M14 7l7 0l0 7" /></svg>
               </div>
             </div>
           </div>
@@ -122,30 +469,49 @@
           <!-- Panel 1: Live Work Queue -->
           <div class="row row-cards mb-4">
             <div class="col-12">
-              <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                  <h3 class="card-title" id="panel-queue-title">🛠️ Active Shop Queue & Today's Works</h3>
-                  <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-add-job">+ Add New Work Order</button>
+              <div class="card shadow-sm">
+                <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="kpi-icon-wrap bg-blue-lt text-primary" style="width: 32px; height: 32px; font-size: 1rem;">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="18" height="18" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 10h3v-3l-3.5 -3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1 -3 3l-6 -6a6 6 0 0 1 -8 -8l3.5 3.5" /></svg>
+                    </div>
+                    <div>
+                      <h3 class="card-title m-0" id="panel-queue-title">Active Shop Queue & Today's Works</h3>
+                      <div class="text-muted small">Live production pipeline and job status</div>
+                    </div>
+                  </div>
+                  <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <div class="input-icon">
+                      <span class="input-icon-addon">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></svg>
+                      </span>
+                      <input type="text" id="queue-search-input" class="form-control form-control-sm" placeholder="Search customer or job..." oninput="filterQueueTable(this.value)" style="width: 220px;">
+                    </div>
+                    <button class="btn btn-primary btn-sm d-flex align-items-center gap-1 shadow-sm" data-bs-toggle="modal" data-bs-target="#modal-add-job">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+                      <span>New Work Order</span>
+                    </button>
+                  </div>
                 </div>
                 <div class="table-responsive">
-                  <table class="table card-table table-vcenter text-nowrap datatable">
+                  <table class="table card-table table-vcenter text-nowrap table-hover" id="job-main-table">
                     <thead>
                       <tr>
                         <th>Date</th>
                         <th>Customer</th>
                         <th>Job Description</th>
                         <th>Qty</th>
-                        <th>Total (Rs.)</th>
-                        <th>Paid (Rs.)</th>
+                        <th>Total</th>
+                        <th>Paid</th>
                         <th>Pending Cash</th>
                         <th>Priority</th>
                         <th>Shop Status</th>
                         <th>Instructions</th>
-                        <th>Action</th>
+                        <th class="text-end">Action</th>
                       </tr>
                     </thead>
                     <tbody id="job-table-body">
-                      <tr><td colspan="11" class="text-center text-muted">Loading live tasks...</td></tr>
+                      <tr><td colspan="11" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading live tasks...</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -156,13 +522,19 @@
           <!-- Panel 2: Outstanding Payments Across All Dates -->
           <div class="row row-cards mb-4">
             <div class="col-12">
-              <div class="card border-danger-subtle">
-                <div class="card-header bg-danger-lt d-flex justify-content-between align-items-center">
-                  <h3 class="card-title text-danger fw-bold">⚠️ Outstanding Payments & Receivables (All Dates)</h3>
-                  <span class="badge bg-danger" id="pending-count-badge">0 Pending Orders</span>
+              <div class="card border-danger-subtle shadow-sm" style="border-left: 4px solid #f43f5e !important;">
+                <div class="card-header bg-danger-lt d-flex justify-content-between align-items-center py-3">
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="text-danger fs-2">⚠️</span>
+                    <div>
+                      <h3 class="card-title text-danger fw-bold m-0">Outstanding Payments & Receivables (All Dates)</h3>
+                      <div class="text-danger small" style="opacity: 0.85;">Pending balances requiring collection or follow-up</div>
+                    </div>
+                  </div>
+                  <span class="badge bg-danger text-white px-3 py-1 fw-bold rounded-pill" id="pending-count-badge">0 Pending Orders</span>
                 </div>
-                <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
-                  <table class="table card-table table-vcenter text-nowrap">
+                <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+                  <table class="table card-table table-vcenter text-nowrap table-hover">
                     <thead>
                       <tr>
                         <th>Date</th>
@@ -173,13 +545,28 @@
                         <th>Paid So Far</th>
                         <th>Unpaid Balance</th>
                         <th>Shop Status</th>
-                        <th>Action</th>
+                        <th class="text-end">Action</th>
                       </tr>
                     </thead>
                     <tbody id="pending-payments-body">
-                      <tr><td colspan="9" class="text-center text-muted">No pending payments found across past dates</td></tr>
+                      <tr><td colspan="9" class="text-center py-3 text-muted">No pending payments found across past dates</td></tr>
                     </tbody>
                   </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Financial Summary Strip -->
+          <div class="row row-cards mb-3" id="financial-summary-strip" style="display: none;">
+            <div class="col-12">
+              <div class="card bg-light border p-3">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                  <div class="d-flex align-items-center gap-3">
+                    <span class="fw-bold text-dark">Period Net Cash Flow:</span>
+                    <span class="fs-2 fw-bold" id="net-cashflow-val">Rs. 0</span>
+                  </div>
+                  <div class="text-muted small">Calculated as: Total Sales Received - Recorded Expenses</div>
                 </div>
               </div>
             </div>
@@ -189,13 +576,21 @@
           <div class="row row-cards">
             <!-- Sales Log -->
             <div class="col-lg-6">
-              <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                  <h3 class="card-title" id="panel-sales-title">💵 Line-by-Line Sales Log</h3>
-                  <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modal-add-sale">+ Log Quick Sale</button>
+              <div class="card shadow-sm h-100">
+                <div class="card-header d-flex justify-content-between align-items-center py-3">
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="kpi-icon-wrap bg-success-lt text-success" style="width: 32px; height: 32px; font-size: 1rem;">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="18" height="18" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M17 8v-3a1 1 0 0 0 -1 -1h-10a2 2 0 0 0 0 4h12a1 1 0 0 1 1 1v3m0 4v3a1 1 0 0 1 -1 1h-12a2 2 0 0 1 -2 -2v-12" /><path d="M20 12v4h-4a2 2 0 0 1 0 -4h4" /></svg>
+                    </div>
+                    <h3 class="card-title m-0" id="panel-sales-title">Line-by-Line Sales Log</h3>
+                  </div>
+                  <button class="btn btn-success btn-sm d-flex align-items-center gap-1 shadow-sm" data-bs-toggle="modal" data-bs-target="#modal-add-sale">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+                    <span>Log Sale</span>
+                  </button>
                 </div>
                 <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
-                  <table class="table card-table table-vcenter">
+                  <table class="table card-table table-vcenter table-hover">
                     <thead>
                       <tr>
                         <th>Date</th>
@@ -204,11 +599,11 @@
                         <th>Qty</th>
                         <th>Amount Paid</th>
                         <th>Status</th>
-                        <th>Action</th>
+                        <th class="text-end">Action</th>
                       </tr>
                     </thead>
                     <tbody id="sales-log-body">
-                      <tr><td colspan="7" class="text-center text-muted">No transactions logged</td></tr>
+                      <tr><td colspan="7" class="text-center py-3 text-muted">No transactions logged</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -217,25 +612,33 @@
 
             <!-- Expenses Log -->
             <div class="col-lg-6">
-              <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                  <h3 class="card-title" id="panel-expense-title">📉 Line-by-Line Expenses</h3>
-                  <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modal-add-expense">+ Log Expense</button>
+              <div class="card shadow-sm h-100">
+                <div class="card-header d-flex justify-content-between align-items-center py-3">
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="kpi-icon-wrap bg-danger-lt text-danger" style="width: 32px; height: 32px; font-size: 1rem;">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="18" height="18" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 17l6 -6l4 4l8 -8" /><path d="M14 7l7 0l0 7" /></svg>
+                    </div>
+                    <h3 class="card-title m-0" id="panel-expense-title">Line-by-Line Expenses</h3>
+                  </div>
+                  <button class="btn btn-outline-danger btn-sm d-flex align-items-center gap-1 shadow-sm" data-bs-toggle="modal" data-bs-target="#modal-add-expense">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+                    <span>Log Expense</span>
+                  </button>
                 </div>
                 <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
-                  <table class="table card-table table-vcenter">
+                  <table class="table card-table table-vcenter table-hover">
                     <thead>
                       <tr>
                         <th>Date</th>
-                        <th>Expense / Description</th>
+                        <th>Description</th>
                         <th>Qty</th>
                         <th>Category</th>
-                        <th>Amount (Rs.)</th>
-                        <th>Action</th>
+                        <th>Amount</th>
+                        <th class="text-end">Action</th>
                       </tr>
                     </thead>
                     <tbody id="expense-table-body">
-                      <tr><td colspan="6" class="text-center text-muted">No expenses recorded</td></tr>
+                      <tr><td colspan="6" class="text-center py-3 text-muted">No expenses recorded</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -1035,6 +1438,42 @@
       renderDashboard(globalData);
     }
 
+    function updateActiveFilterButtons() {
+      const btns = ['btn-today', 'btn-month', 'btn-range-toggle', 'btn-alldates'];
+      btns.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('active');
+      });
+
+      if (currentFilterMode === 'today') {
+        document.getElementById('btn-today')?.classList.add('active');
+      } else if (currentFilterMode === 'range') {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+        const startMonth = `${year}-${month}-01`;
+        const endMonth = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+        if (rangeStartDateVal === startMonth && rangeEndDateVal === endMonth) {
+          document.getElementById('btn-month')?.classList.add('active');
+        } else {
+          document.getElementById('btn-range-toggle')?.classList.add('active');
+        }
+      } else if (currentFilterMode === 'all') {
+        document.getElementById('btn-alldates')?.classList.add('active');
+      }
+    }
+
+    function filterQueueTable(query) {
+      const q = (query || '').toLowerCase().trim();
+      const rows = document.querySelectorAll('#job-table-body tr');
+      rows.forEach(r => {
+        if (r.cells.length <= 1) return; // Skip empty message
+        const text = r.innerText.toLowerCase();
+        r.style.display = text.includes(q) ? '' : 'none';
+      });
+    }
+
     function renderDashboard(data) {
       if (!data) data = { jobs: [], sales: [], expenses: [] };
       let totalSales = 0;
@@ -1046,33 +1485,35 @@
       completedJobsSummary = [];
       outstandingItemsSummary = [];
 
+      updateActiveFilterButtons();
+
       const activeDateFilter = selectedDateVal;
 
       if (currentFilterMode === 'all') {
         document.getElementById('kpi-sales-label').innerText = "All Time Sales";
         document.getElementById('kpi-expense-label').innerText = "All Time Expenses";
-        document.getElementById('panel-queue-title').innerText = "🛠️ Work Queue (All Dates)";
-        document.getElementById('panel-sales-title').innerText = "💵 Line-by-Line Sales Log (All Dates)";
-        document.getElementById('panel-expense-title').innerText = "📉 Line-by-Line Expenses (All Dates)";
+        document.getElementById('panel-queue-title').innerText = "Active Shop Queue (All Dates)";
+        document.getElementById('panel-sales-title').innerText = "Line-by-Line Sales Log (All Dates)";
+        document.getElementById('panel-expense-title').innerText = "Line-by-Line Expenses (All Dates)";
       } else if (currentFilterMode === 'range') {
         const label = `${rangeStartDateVal} to ${rangeEndDateVal}`;
         document.getElementById('kpi-sales-label').innerText = `Sales (${label})`;
         document.getElementById('kpi-expense-label').innerText = `Expenses (${label})`;
-        document.getElementById('panel-queue-title').innerText = `🛠️ Work Queue (${label})`;
-        document.getElementById('panel-sales-title').innerText = `💵 Sales Log (${label})`;
-        document.getElementById('panel-expense-title').innerText = `📉 Expenses (${label})`;
+        document.getElementById('panel-queue-title').innerText = `Work Queue (${label})`;
+        document.getElementById('panel-sales-title').innerText = `Sales Log (${label})`;
+        document.getElementById('panel-expense-title').innerText = `Expenses (${label})`;
       } else if (currentFilterMode === 'specific') {
         document.getElementById('kpi-sales-label').innerText = `Sales (${activeDateFilter})`;
         document.getElementById('kpi-expense-label').innerText = `Expenses (${activeDateFilter})`;
-        document.getElementById('panel-queue-title').innerText = `🛠️ Work Queue (${activeDateFilter})`;
-        document.getElementById('panel-sales-title').innerText = `💵 Sales Log (${activeDateFilter})`;
-        document.getElementById('panel-expense-title').innerText = `📉 Expenses (${activeDateFilter})`;
+        document.getElementById('panel-queue-title').innerText = `Work Queue (${activeDateFilter})`;
+        document.getElementById('panel-sales-title').innerText = `Sales Log (${activeDateFilter})`;
+        document.getElementById('panel-expense-title').innerText = `Expenses (${activeDateFilter})`;
       } else {
         document.getElementById('kpi-sales-label').innerText = "Today's Sales";
         document.getElementById('kpi-expense-label').innerText = "Today's Expenses";
-        document.getElementById('panel-queue-title').innerText = "🛠️ Active Shop Queue & Today's Works";
-        document.getElementById('panel-sales-title').innerText = "💵 Line-by-Line Sales Log";
-        document.getElementById('panel-expense-title').innerText = "📉 Line-by-Line Daily Expenses";
+        document.getElementById('panel-queue-title').innerText = "Active Shop Queue & Today's Works";
+        document.getElementById('panel-sales-title').innerText = "Line-by-Line Sales Log";
+        document.getElementById('panel-expense-title').innerText = "Line-by-Line Daily Expenses";
       }
 
       let jobRowsHtml = '';
@@ -1085,6 +1526,7 @@
           const paid = parseFloat(row["Amount Paid"]) || 0;
           const pending = parseFloat(row["Pending Cash"]) || (total - paid);
           const status = row["Shop Status"] || '🔴 Not Started';
+          const priority = row["Priority"] || '🟡 Medium';
           const rowDate = getLocalDateString(row["Date"]);
           const custName = row["Customer Name"] || 'Walk-in';
           const jobDesc = row["Job Description"] || '';
@@ -1105,31 +1547,37 @@
           if (!isCompleted || matchesFilter) {
             if (!isCompleted) activeJobs++;
 
+            let priorityClass = 'badge-priority-med';
+            if (priority.includes('High')) priorityClass = 'badge-priority-high';
+            else if (priority.includes('Low')) priorityClass = 'badge-priority-low';
+
             jobRowsHtml += `
               <tr>
-                <td>${rowDate}</td>
-                <td><strong>${custName}</strong></td>
-                <td>${jobDesc}</td>
-                <td><span class="badge bg-blue-lt">${qty}</span></td>
-                <td>Rs. ${total.toLocaleString('en-PK')}</td>
-                <td>Rs. ${paid.toLocaleString('en-PK')}</td>
-                <td class="${pending > 0 ? 'text-danger fw-bold' : 'text-success'}">Rs. ${pending.toLocaleString('en-PK')}</td>
-                <td><span class="badge bg-secondary-lt">${row["Priority"] || '🟡 Medium'}</span></td>
+                <td><span class="text-muted small fw-semibold">${rowDate}</span></td>
                 <td>
-                  <select class="form-select form-select-sm" onchange="updateJobStatus(${row.rowIndex}, this.value)">
+                  <div class="fw-bold text-dark">${custName}</div>
+                </td>
+                <td><div class="fw-semibold">${jobDesc}</div></td>
+                <td><span class="badge bg-blue-lt fw-bold">${qty}</span></td>
+                <td class="fw-semibold">Rs. ${total.toLocaleString('en-PK')}</td>
+                <td class="text-success fw-semibold">Rs. ${paid.toLocaleString('en-PK')}</td>
+                <td class="${pending > 0 ? 'text-danger fw-bold fs-4' : 'text-success fw-semibold'}">Rs. ${pending.toLocaleString('en-PK')}</td>
+                <td><span class="badge-status ${priorityClass}">${priority}</span></td>
+                <td>
+                  <select class="form-select form-select-sm" style="font-size: 0.8rem; font-weight: 600;" onchange="updateJobStatus(${row.rowIndex}, this.value)">
                     <option value="🔴 Not Started" ${status.includes('Not Started') ? 'selected' : ''}>🔴 Not Started</option>
                     <option value="🟡 In Progress" ${status.includes('In Progress') ? 'selected' : ''}>🟡 In Progress</option>
                     <option value="🟢 Ready" ${status.includes('Ready') ? 'selected' : ''}>🟢 Ready</option>
                   </select>
                 </td>
-                <td><small class="text-muted">${row["Work Instructions"] || ''}</small></td>
-                <td>
-                  <div class="btn-list flex-nowrap">
+                <td><span class="text-muted small" style="max-width: 160px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${row["Work Instructions"] || '—'}</span></td>
+                <td class="text-end">
+                  <div class="btn-list flex-nowrap justify-content-end">
                     ${pending > 0 ? `
-                      <button class="btn btn-sm btn-success me-1" onclick="openPaymentModal(${row.rowIndex}, 'full')">💵 Pay</button>
-                      <button class="btn btn-sm btn-outline-success me-1" onclick="sendWhatsAppReminderByRow(${row.rowIndex})">💬 WA</button>
+                      <button class="btn btn-sm btn-success px-2 py-1" onclick="openPaymentModal(${row.rowIndex}, 'full')" title="Record Payment">💵 Pay</button>
+                      <button class="btn btn-sm btn-outline-success px-2 py-1" onclick="sendWhatsAppReminderByRow(${row.rowIndex})" title="Send WhatsApp Reminder">💬 WA</button>
                     ` : ''}
-                    <button class="btn btn-ghost-primary btn-icon btn-sm" onclick="openEditJobModal(${row.rowIndex})">✏️ Edit</button>
+                    <button class="btn btn-ghost-secondary btn-sm px-2 py-1" onclick="openEditJobModal(${row.rowIndex})" title="Edit Order">✏️ Edit</button>
                   </div>
                 </td>
               </tr>
@@ -1147,25 +1595,25 @@
 
             pendingPaymentsHtml += `
               <tr>
-                <td><span class="badge bg-outline text-secondary">${rowDate}</span></td>
-                <td><strong>${custName}</strong></td>
-                <td>${jobDesc}</td>
-                <td><span class="badge bg-blue-lt">${qty}</span></td>
+                <td><span class="badge bg-slate-lt text-secondary fw-semibold">${rowDate}</span></td>
+                <td><div class="fw-bold text-dark">${custName}</div></td>
+                <td><div class="fw-semibold">${jobDesc}</div></td>
+                <td><span class="badge bg-blue-lt fw-bold">${qty}</span></td>
                 <td>Rs. ${total.toLocaleString('en-PK')}</td>
-                <td>Rs. ${paid.toLocaleString('en-PK')}</td>
+                <td class="text-muted">Rs. ${paid.toLocaleString('en-PK')}</td>
                 <td class="text-danger fw-bold fs-3">Rs. ${pending.toLocaleString('en-PK')}</td>
                 <td>
-                  <select class="form-select form-select-sm" onchange="updateJobStatus(${row.rowIndex}, this.value)">
+                  <select class="form-select form-select-sm" style="font-size: 0.8rem; font-weight: 600;" onchange="updateJobStatus(${row.rowIndex}, this.value)">
                     <option value="🔴 Not Started" ${status.includes('Not Started') ? 'selected' : ''}>🔴 Not Started</option>
                     <option value="🟡 In Progress" ${status.includes('In Progress') ? 'selected' : ''}>🟡 In Progress</option>
                     <option value="🟢 Ready" ${status.includes('Ready') ? 'selected' : ''}>🟢 Ready</option>
                   </select>
                 </td>
-                <td>
-                  <div class="btn-list flex-nowrap">
-                    <button class="btn btn-sm btn-success me-1" onclick="openPaymentModal(${row.rowIndex}, 'full')">💵 Pay</button>
-                    <button class="btn btn-sm btn-outline-primary me-1" onclick="openEditJobModal(${row.rowIndex})">⚙️ Edit</button>
-                    <button class="btn btn-sm btn-success me-1" onclick="sendWhatsAppReminderByRow(${row.rowIndex})">💬 WhatsApp</button>
+                <td class="text-end">
+                  <div class="btn-list flex-nowrap justify-content-end">
+                    <button class="btn btn-sm btn-success px-2 py-1" onclick="openPaymentModal(${row.rowIndex}, 'full')">💵 Pay</button>
+                    <button class="btn btn-sm btn-outline-success px-2 py-1" onclick="sendWhatsAppReminderByRow(${row.rowIndex})">💬 WhatsApp</button>
+                    <button class="btn btn-sm btn-ghost-primary px-2 py-1" onclick="openEditJobModal(${row.rowIndex})">⚙️ Edit</button>
                   </div>
                 </td>
               </tr>
@@ -1203,14 +1651,14 @@
 
             salesRowsHtml += `
               <tr>
-                <td><small class="text-muted">${rowDate}</small></td>
-                <td><strong>${custName}</strong></td>
-                <td>${serviceItem}</td>
-                <td><span class="badge bg-blue-lt">${qty}</span></td>
+                <td><small class="text-muted fw-semibold">${rowDate}</small></td>
+                <td><div class="fw-bold text-dark">${custName}</div></td>
+                <td><div class="fw-semibold">${serviceItem}</div></td>
+                <td><span class="badge bg-blue-lt fw-bold">${qty}</span></td>
                 <td class="text-success fw-bold">Rs. ${paid.toLocaleString('en-PK')}</td>
-                <td><span class="badge bg-success-lt">Paid</span></td>
-                <td>
-                  <button class="btn btn-ghost-success btn-icon btn-sm" onclick="openEditSaleModal(${row.rowIndex})">✏️ Edit</button>
+                <td><span class="badge-status badge-ready">Paid</span></td>
+                <td class="text-end">
+                  <button class="btn btn-ghost-secondary btn-icon btn-sm" onclick="openEditSaleModal(${row.rowIndex})">✏️</button>
                 </td>
               </tr>
             `;
@@ -1253,13 +1701,13 @@
 
             expenseRowsHtml += `
               <tr>
-                <td><small class="text-muted">${rowDate}</small></td>
-                <td>${desc}</td>
-                <td><span class="badge bg-blue-lt">${qty}</span></td>
-                <td><span class="badge bg-secondary-lt">${row["Category"] || 'Materials'}</span></td>
+                <td><small class="text-muted fw-semibold">${rowDate}</small></td>
+                <td><div class="fw-semibold text-dark">${desc}</div></td>
+                <td><span class="badge bg-blue-lt fw-bold">${qty}</span></td>
+                <td><span class="badge-status badge-notstarted">${row["Category"] || 'Materials'}</span></td>
                 <td class="fw-bold text-danger">Rs. ${expAmt.toLocaleString('en-PK')}</td>
-                <td>
-                  <button class="btn btn-ghost-danger btn-icon btn-sm" onclick="openEditExpenseModal(${row.rowIndex})">✏️ Edit</button>
+                <td class="text-end">
+                  <button class="btn btn-ghost-secondary btn-icon btn-sm" onclick="openEditExpenseModal(${row.rowIndex})">✏️</button>
                 </td>
               </tr>
             `;
@@ -1274,12 +1722,26 @@
       document.getElementById('kpi-active-jobs').innerText = activeJobs;
       document.getElementById('kpi-expenses').innerText = `Rs. ${totalExpenses.toLocaleString('en-PK')}`;
 
-      document.getElementById('job-table-body').innerHTML = jobRowsHtml || '<tr><td colspan="11" class="text-center text-muted">No active work orders found for selected date range</td></tr>';
-      document.getElementById('pending-payments-body').innerHTML = pendingPaymentsHtml || '<tr><td colspan="9" class="text-center text-muted">No pending payments found across past dates</td></tr>';
+      // Net Cash Flow Strip
+      const netCashflow = totalSales - totalExpenses;
+      const netCashflowEl = document.getElementById('net-cashflow-val');
+      const netCashflowStrip = document.getElementById('financial-summary-strip');
+      if (netCashflowEl && netCashflowStrip) {
+        netCashflowStrip.style.display = 'block';
+        netCashflowEl.innerText = `Rs. ${netCashflow.toLocaleString('en-PK')}`;
+        netCashflowEl.className = netCashflow >= 0 ? 'fs-2 fw-bold text-success' : 'fs-2 fw-bold text-danger';
+      }
+
+      document.getElementById('job-table-body').innerHTML = jobRowsHtml || '<tr><td colspan="11" class="text-center py-4 text-muted">No active work orders found for selected view</td></tr>';
+      document.getElementById('pending-payments-body').innerHTML = pendingPaymentsHtml || '<tr><td colspan="9" class="text-center py-4 text-muted">No pending payments found across past dates</td></tr>';
       document.getElementById('pending-count-badge').innerText = `${pendingPaymentsCount} Pending Orders`;
 
-      document.getElementById('sales-log-body').innerHTML = salesRowsHtml || '<tr><td colspan="7" class="text-center text-muted">No sales logged for selected view</td></tr>';
-      document.getElementById('expense-table-body').innerHTML = expenseRowsHtml || '<tr><td colspan="6" class="text-center text-muted">No expenses recorded for selected view</td></tr>';
+      document.getElementById('sales-log-body').innerHTML = salesRowsHtml || '<tr><td colspan="7" class="text-center py-4 text-muted">No sales logged for selected view</td></tr>';
+      document.getElementById('expense-table-body').innerHTML = expenseRowsHtml || '<tr><td colspan="6" class="text-center py-4 text-muted">No expenses recorded for selected view</td></tr>';
+
+      // Re-apply search filter if user had typed something
+      const searchVal = document.getElementById('queue-search-input')?.value;
+      if (searchVal) filterQueueTable(searchVal);
     }
 
     function sendToSheet(payload, skipRefresh = false) {
