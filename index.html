@@ -350,7 +350,10 @@
 
 <body class="theme-light">
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbzNtkplZTaCjRiRHofsfIgGINhX3W2ZF0HgV6xHdG0JzsLi8I8KbwG-dpH2TY_DtKa3/exec";
+    // Uses local Express server-side proxy by default to prevent CORS/redirect issues in browser and iframe environments,
+    // while maintaining direct Google Script URL as fallback.
+    const GOOGLE_SCRIPT_DIRECT_URL = "https://script.google.com/macros/s/AKfycbzNtkplZTaCjRiRHofsfIgGINhX3W2ZF0HgV6xHdG0JzsLi8I8KbwG-dpH2TY_DtKa3/exec";
+    const API_URL = "/api/sheet";
   </script>
 
   <!-- Toast Container for Non-blocking Alerts -->
@@ -523,18 +526,44 @@
           <div class="row row-cards mb-4">
             <div class="col-12">
               <div class="card border-danger-subtle shadow-sm" style="border-left: 4px solid #f43f5e !important;">
-                <div class="card-header bg-danger-lt d-flex justify-content-between align-items-center py-3">
+                <div class="card-header bg-danger-lt d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
                   <div class="d-flex align-items-center gap-2">
                     <span class="text-danger fs-2">⚠️</span>
                     <div>
-                      <h3 class="card-title text-danger fw-bold m-0">Outstanding Payments & Receivables (All Dates)</h3>
-                      <div class="text-danger small" style="opacity: 0.85;">Pending balances requiring collection or follow-up</div>
+                      <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <h3 class="card-title text-danger fw-bold m-0">Outstanding Payments & Receivables (All Dates)</h3>
+                        <span class="badge bg-danger text-white px-2 py-1 fw-bold rounded-pill" id="pending-total-amount-badge">Total: Rs. 0</span>
+                      </div>
+                      <div class="text-danger small" style="opacity: 0.85;">Pending balances requiring collection, client follow-up, or consolidated statements</div>
                     </div>
                   </div>
-                  <span class="badge bg-danger text-white px-3 py-1 fw-bold rounded-pill" id="pending-count-badge">0 Pending Orders</span>
+                  
+                  <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <!-- Search Bar in Outstanding Payments -->
+                    <div class="input-icon">
+                      <span class="input-icon-addon">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></svg>
+                      </span>
+                      <input type="text" id="pending-search-input" class="form-control form-control-sm" placeholder="Search customer, job or phone..." oninput="filterPendingTables(this.value)" style="width: 230px; background-color: #fff;">
+                    </div>
+
+                    <!-- View Toggle: By Order vs By Customer -->
+                    <div class="btn-group btn-group-sm bg-white rounded shadow-xs p-0 border" role="group">
+                      <button type="button" class="btn btn-sm btn-outline-danger active fw-semibold" id="btn-view-by-order" onclick="setPendingViewMode('order')">
+                        📋 By Order
+                      </button>
+                      <button type="button" class="btn btn-sm btn-outline-danger fw-semibold" id="btn-view-by-customer" onclick="setPendingViewMode('customer')">
+                        👥 By Customer Ledger
+                      </button>
+                    </div>
+
+                    <span class="badge bg-danger text-white px-3 py-1 fw-bold rounded-pill" id="pending-count-badge">0 Pending Orders</span>
+                  </div>
                 </div>
-                <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
-                  <table class="table card-table table-vcenter text-nowrap table-hover">
+
+                <!-- View 1: By Order Table -->
+                <div class="table-responsive" id="container-pending-by-order" style="max-height: 360px; overflow-y: auto;">
+                  <table class="table card-table table-vcenter text-nowrap table-hover" id="table-pending-by-order">
                     <thead>
                       <tr>
                         <th>Date</th>
@@ -553,6 +582,27 @@
                     </tbody>
                   </table>
                 </div>
+
+                <!-- View 2: By Customer Aggregated Ledger Table -->
+                <div class="table-responsive d-none" id="container-pending-by-customer" style="max-height: 360px; overflow-y: auto;">
+                  <table class="table card-table table-vcenter text-nowrap table-hover" id="table-pending-by-customer">
+                    <thead>
+                      <tr>
+                        <th>Customer Name</th>
+                        <th>Contact / Phone</th>
+                        <th>Unpaid Orders</th>
+                        <th>Breakdown of Pending Orders</th>
+                        <th>Oldest Unpaid</th>
+                        <th class="text-danger fw-bold">Grand Total Due</th>
+                        <th class="text-end">Consolidated Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="pending-customers-body">
+                      <tr><td colspan="7" class="text-center py-3 text-muted">No customer pending balances found</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+
               </div>
             </div>
           </div>
@@ -912,6 +962,88 @@
     </div>
   </div>
 
+  <!-- MODAL FOR CONSOLIDATED CUSTOMER ACCOUNT STATEMENT -->
+  <div class="modal modal-blur fade" id="modal-customer-statement" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-danger-lt">
+          <div class="d-flex align-items-center gap-2">
+            <span class="fs-2">📑</span>
+            <div>
+              <h5 class="modal-title text-danger fw-bold m-0" id="statement-modal-title">Customer Ledger & Statement</h5>
+              <div class="text-muted small" id="statement-modal-subtitle">All pending orders and total balance</div>
+            </div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <div class="card bg-light border-0 p-3 h-100">
+                <div class="text-muted small fw-bold text-uppercase">Customer Information</div>
+                <div class="fs-2 fw-bold text-dark mt-1" id="statement-customer-name">—</div>
+                <div class="text-muted small" id="statement-customer-phone">Phone: —</div>
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="card bg-danger-lt border-0 p-3 h-100">
+                <div class="text-danger small fw-bold text-uppercase">Combined Total Balance Due</div>
+                <div class="fs-1 fw-bold text-danger mt-1" id="statement-customer-total">Rs. 0</div>
+                <div class="text-danger small fw-semibold" id="statement-customer-count">0 Unpaid Orders</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card mb-3 border">
+            <div class="card-header py-2 bg-light d-flex justify-content-between align-items-center">
+              <span class="fw-bold small text-secondary">Breakdown of Unpaid Work Orders</span>
+              <span class="badge bg-danger-lt fw-semibold" id="statement-orders-badge">Orders</span>
+            </div>
+            <div class="table-responsive" style="max-height: 240px; overflow-y: auto;">
+              <table class="table card-table table-vcenter table-sm">
+                <thead>
+                  <tr class="bg-light">
+                    <th>Date</th>
+                    <th>Job Description</th>
+                    <th>Qty</th>
+                    <th>Total</th>
+                    <th>Paid</th>
+                    <th class="text-danger fw-bold">Pending</th>
+                    <th class="text-end">Pay</th>
+                  </tr>
+                </thead>
+                <tbody id="statement-orders-body">
+                  <tr><td colspan="7" class="text-center py-3 text-muted">No orders found</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- WhatsApp Consolidated Message Preview -->
+          <div class="mb-2">
+            <label class="form-label d-flex justify-content-between align-items-center mb-1">
+              <span class="fw-bold small text-muted">Consolidated WhatsApp Statement Preview:</span>
+              <button type="button" class="btn btn-ghost-primary btn-sm py-0 px-2" onclick="copyStatementText()">📋 Copy Statement</button>
+            </label>
+            <textarea id="statement-wa-preview" class="form-control font-monospace" rows="6" readonly style="font-size: 0.85rem; background: #f8fafc;"></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer d-flex justify-content-between flex-wrap gap-2">
+          <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Close</button>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-success" onclick="openStatementWhatsApp('web')">
+              🌐 Web WA
+            </button>
+            <button type="button" class="btn btn-success fw-bold" onclick="openStatementWhatsApp('desktop')">
+              💬 Send Full Statement (WhatsApp)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- MODALS FOR ADDING -->
   <div class="modal modal-blur fade" id="modal-add-job" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
@@ -923,8 +1055,12 @@
         <div class="modal-body">
           <div class="row">
             <div class="col-lg-4 mb-3">
-              <label class="form-label">Customer Name</label>
-              <input type="text" id="input-customer" class="form-control" placeholder="e.g. Ali Khan">
+              <label class="form-label d-flex justify-content-between">
+                <span>Customer Name</span>
+                <span class="text-muted small" id="customer-match-badge"></span>
+              </label>
+              <input type="text" id="input-customer" list="customer-names-datalist" class="form-control" placeholder="e.g. Ali Khan" oninput="checkCustomerExistingBalance(this.value)" autocomplete="off">
+              <datalist id="customer-names-datalist"></datalist>
             </div>
             <div class="col-lg-3 mb-3">
               <label class="form-label">WhatsApp Number</label>
@@ -940,14 +1076,37 @@
             </div>
           </div>
 
+          <!-- Live Customer Existing Outstanding Credit Alert -->
+          <div id="new-job-customer-credit-alert" class="alert alert-danger d-none py-2 px-3 mb-3 border-start border-4 border-danger shadow-xs" role="alert">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+              <div>
+                <div class="fw-bold text-danger d-flex align-items-center gap-1">
+                  <span>⚠️ Unpaid Balance Warning:</span>
+                  <span id="credit-alert-name" class="text-dark">Customer</span>
+                </div>
+                <div class="small text-muted" id="credit-alert-details">
+                  This customer has 1 previous order with unpaid balance.
+                </div>
+              </div>
+              <div class="text-end">
+                <div class="small text-muted fw-bold">Existing Unpaid:</div>
+                <div class="fs-3 fw-bold text-danger" id="credit-alert-amount">Rs. 0</div>
+              </div>
+            </div>
+            <div class="mt-2 pt-2 border-top border-danger-subtle d-flex justify-content-between align-items-center small">
+              <span class="text-secondary fw-semibold">💡 Recommended: Collect advance payment before proceeding.</span>
+              <span class="badge bg-danger-lt fw-bold" id="credit-alert-combined-total">Total Balance With This Order: Rs. 0</span>
+            </div>
+          </div>
+
           <div class="row">
             <div class="col-lg-3 mb-3">
               <label class="form-label">Total Amount (Rs.)</label>
-              <input type="number" id="input-total" class="form-control" placeholder="0">
+              <input type="number" id="input-total" class="form-control" placeholder="0" oninput="updateNewJobPendingPreview()">
             </div>
             <div class="col-lg-3 mb-3">
               <label class="form-label">Amount Paid (Rs.)</label>
-              <input type="number" id="input-paid" class="form-control" placeholder="0">
+              <input type="number" id="input-paid" class="form-control" placeholder="0" oninput="updateNewJobPendingPreview()">
             </div>
             <div class="col-lg-3 mb-3">
               <label class="form-label">Shop Status</label>
@@ -1226,6 +1385,8 @@
     let computedExpenses = { wages: 0, materials: 0, equipment: 0, other: [], rawMaterialsList: [], maintenanceList: [] };
     let completedJobsSummary = [];
     let outstandingItemsSummary = [];
+    let currentPendingViewMode = 'order'; // 'order' or 'customer'
+    let customerPendingMap = {}; // Key: normalized lowercase customer name -> customer pending details
 
     // Mode: 'today', 'specific', 'range', or 'all'
     let currentFilterMode = 'today'; 
@@ -1281,7 +1442,19 @@
       const btn = document.getElementById('btn-refresh');
       if(btn) btn.innerText = "⏳ Loading...";
       try {
-        const res = await fetch(API_URL);
+        let res;
+        try {
+          res = await fetch(API_URL);
+        } catch (fetchErr) {
+          console.warn("Proxy fetch failed, trying direct URL:", fetchErr);
+          res = await fetch(GOOGLE_SCRIPT_DIRECT_URL);
+        }
+
+        if (!res.ok && res.status >= 500) {
+          // Fallback to direct script url if proxy responded with server error
+          res = await fetch(GOOGLE_SCRIPT_DIRECT_URL);
+        }
+
         const data = await res.json();
         if (data && typeof data === 'object') {
           globalData = data;
@@ -1474,12 +1647,57 @@
       });
     }
 
+    function setPendingViewMode(mode) {
+      currentPendingViewMode = mode;
+      const btnOrder = document.getElementById('btn-view-by-order');
+      const btnCustomer = document.getElementById('btn-view-by-customer');
+      const containerOrder = document.getElementById('container-pending-by-order');
+      const containerCustomer = document.getElementById('container-pending-by-customer');
+
+      if (mode === 'customer') {
+        btnCustomer?.classList.add('active');
+        btnOrder?.classList.remove('active');
+        containerCustomer?.classList.remove('d-none');
+        containerOrder?.classList.add('d-none');
+      } else {
+        btnOrder?.classList.add('active');
+        btnCustomer?.classList.remove('active');
+        containerOrder?.classList.remove('d-none');
+        containerCustomer?.classList.add('d-none');
+      }
+
+      const searchVal = document.getElementById('pending-search-input')?.value;
+      if (searchVal) filterPendingTables(searchVal);
+    }
+
+    function filterPendingTables(query) {
+      const q = (query || '').toLowerCase().trim();
+      
+      // Filter "By Order" table
+      const orderRows = document.querySelectorAll('#pending-payments-body tr');
+      orderRows.forEach(r => {
+        if (r.cells.length <= 1) return; // Skip empty row
+        const text = r.innerText.toLowerCase();
+        r.style.display = text.includes(q) ? '' : 'none';
+      });
+
+      // Filter "By Customer" table
+      const customerRows = document.querySelectorAll('#pending-customers-body tr');
+      customerRows.forEach(r => {
+        if (r.cells.length <= 1) return; // Skip empty row
+        const text = r.innerText.toLowerCase();
+        r.style.display = text.includes(q) ? '' : 'none';
+      });
+    }
+
     function renderDashboard(data) {
       if (!data) data = { jobs: [], sales: [], expenses: [] };
       let totalSales = 0;
       let totalPending = 0;
       let activeJobs = 0;
       let totalExpenses = 0;
+      const allKnownCustomerNames = new Set();
+      customerPendingMap = {};
 
       computedExpenses = { wages: 0, materials: 0, equipment: 0, other: [], rawMaterialsList: [], maintenanceList: [] };
       completedJobsSummary = [];
@@ -1584,6 +1802,10 @@
             `;
           }
 
+          if (custName && custName !== 'Walk-in') {
+            allKnownCustomerNames.add(custName.trim());
+          }
+
           if (pending > 0) {
             pendingPaymentsCount++;
             outstandingItemsSummary.push({
@@ -1591,6 +1813,45 @@
               job: jobDesc,
               pending: pending,
               date: rowDate
+            });
+
+            // Grouping by Customer for Customer Ledger View
+            const rawWa = row["WhatsApp Number"] || row["WhatsApp"] || row["Phone"] || row["Phone Number"] || '';
+            const normKey = (custName || 'Unknown').trim().toLowerCase();
+
+            if (!customerPendingMap[normKey]) {
+              customerPendingMap[normKey] = {
+                name: custName,
+                key: normKey,
+                whatsapp: rawWa,
+                orders: [],
+                totalPending: 0,
+                totalAmount: 0,
+                totalPaid: 0,
+                oldestDate: rowDate
+              };
+            } else {
+              if (!customerPendingMap[normKey].whatsapp && rawWa) {
+                customerPendingMap[normKey].whatsapp = rawWa;
+              }
+              if (rowDate && (!customerPendingMap[normKey].oldestDate || rowDate < customerPendingMap[normKey].oldestDate)) {
+                customerPendingMap[normKey].oldestDate = rowDate;
+              }
+            }
+
+            customerPendingMap[normKey].totalPending += pending;
+            customerPendingMap[normKey].totalAmount += total;
+            customerPendingMap[normKey].totalPaid += paid;
+            customerPendingMap[normKey].orders.push({
+              rowIndex: row.rowIndex,
+              date: rowDate,
+              job: jobDesc,
+              qty: qty,
+              total: total,
+              paid: paid,
+              pending: pending,
+              status: status,
+              whatsapp: rawWa
             });
 
             pendingPaymentsHtml += `
@@ -1622,6 +1883,73 @@
         });
       }
 
+      // Generate HTML for Customer Aggregated Ledger Table
+      const customerKeys = Object.keys(customerPendingMap).sort((a, b) => {
+        return customerPendingMap[b].totalPending - customerPendingMap[a].totalPending;
+      });
+
+      let pendingCustomersHtml = '';
+      customerKeys.forEach(key => {
+        const c = customerPendingMap[key];
+        const orderCount = c.orders.length;
+
+        // Build compact itemized order preview
+        const ordersBreakdownHtml = c.orders.map(o => {
+          return `
+            <div class="d-flex align-items-center justify-content-between gap-2 py-1 border-bottom border-light">
+              <span class="text-truncate" style="max-width: 200px;" title="${o.job}">• ${o.job}${o.qty > 1 ? ` (x${o.qty})` : ''} <span class="text-muted font-monospace small">(${o.date})</span></span>
+              <span class="text-danger fw-semibold">Rs. ${o.pending.toLocaleString('en-PK')}</span>
+            </div>
+          `;
+        }).join('');
+
+        pendingCustomersHtml += `
+          <tr>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <span class="avatar avatar-sm bg-danger-lt text-danger fw-bold rounded-circle">${(c.name || 'C').charAt(0).toUpperCase()}</span>
+                <div>
+                  <div class="fw-bold text-dark fs-4">${c.name}</div>
+                  <div class="text-muted small">${orderCount} pending order${orderCount > 1 ? 's' : ''}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              ${c.whatsapp ? `
+                <div class="font-monospace small fw-semibold text-secondary">
+                  📞 ${c.whatsapp}
+                </div>
+              ` : '<span class="text-muted small">No phone saved</span>'}
+            </td>
+            <td>
+              <span class="badge bg-danger-lt text-danger fw-bold px-2 py-1 fs-5">${orderCount} Order${orderCount > 1 ? 's' : ''}</span>
+            </td>
+            <td style="min-width: 240px;">
+              <div style="max-height: 90px; overflow-y: auto;">
+                ${ordersBreakdownHtml}
+              </div>
+            </td>
+            <td>
+              <span class="badge bg-slate-lt text-secondary fw-semibold">${c.oldestDate || '—'}</span>
+            </td>
+            <td>
+              <div class="text-danger fw-bold fs-2">Rs. ${c.totalPending.toLocaleString('en-PK')}</div>
+              <div class="text-muted small">Total: Rs. ${c.totalAmount.toLocaleString('en-PK')} | Paid: Rs. ${c.totalPaid.toLocaleString('en-PK')}</div>
+            </td>
+            <td class="text-end">
+              <div class="btn-list flex-nowrap justify-content-end">
+                <button class="btn btn-sm btn-outline-success px-2 py-1 fw-semibold" onclick="openCustomerStatementModal('${key}')" title="Send Consolidated WhatsApp Statement">
+                  💬 Statement
+                </button>
+                <button class="btn btn-sm btn-success px-2 py-1 fw-semibold" onclick="openCustomerStatementModal('${key}')" title="View & Settle Orders">
+                  💵 View / Pay
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+
       let salesRowsHtml = '';
       if (data.sales && data.sales.length > 0) {
         data.sales.forEach(row => {
@@ -1629,6 +1957,10 @@
           const rowDate = getLocalDateString(row["Date"]);
           const qty = parseInt(row["Quantity"] || row["Qty"]) || 1;
           const custName = row["Customer Name"] || 'Walk-in';
+
+          if (custName && custName !== 'Walk-in') {
+            allKnownCustomerNames.add(custName.trim());
+          }
 
           let matchesFilter = false;
           if (currentFilterMode === 'all') {
@@ -1734,33 +2066,58 @@
 
       document.getElementById('job-table-body').innerHTML = jobRowsHtml || '<tr><td colspan="11" class="text-center py-4 text-muted">No active work orders found for selected view</td></tr>';
       document.getElementById('pending-payments-body').innerHTML = pendingPaymentsHtml || '<tr><td colspan="9" class="text-center py-4 text-muted">No pending payments found across past dates</td></tr>';
-      document.getElementById('pending-count-badge').innerText = `${pendingPaymentsCount} Pending Orders`;
+      document.getElementById('pending-customers-body').innerHTML = pendingCustomersHtml || '<tr><td colspan="7" class="text-center py-4 text-muted">No customer pending balances found</td></tr>';
+      
+      document.getElementById('pending-count-badge').innerText = `${pendingPaymentsCount} Orders (${customerKeys.length} Customers)`;
+      const totalPendingBadge = document.getElementById('pending-total-amount-badge');
+      if (totalPendingBadge) totalPendingBadge.innerText = `Total: Rs. ${totalPending.toLocaleString('en-PK')}`;
+
+      // Update datalist with all known customers
+      const datalistEl = document.getElementById('customer-names-datalist');
+      if (datalistEl) {
+        const sortedNames = Array.from(allKnownCustomerNames).sort();
+        datalistEl.innerHTML = sortedNames.map(name => `<option value="${name}">`).join('');
+      }
 
       document.getElementById('sales-log-body').innerHTML = salesRowsHtml || '<tr><td colspan="7" class="text-center py-4 text-muted">No sales logged for selected view</td></tr>';
       document.getElementById('expense-table-body').innerHTML = expenseRowsHtml || '<tr><td colspan="6" class="text-center py-4 text-muted">No expenses recorded for selected view</td></tr>';
 
-      // Re-apply search filter if user had typed something
+      // Re-apply search filters if user had typed something
       const searchVal = document.getElementById('queue-search-input')?.value;
       if (searchVal) filterQueueTable(searchVal);
+
+      const pendingSearchVal = document.getElementById('pending-search-input')?.value;
+      if (pendingSearchVal) filterPendingTables(pendingSearchVal);
     }
 
-    function sendToSheet(payload, skipRefresh = false) {
-      return fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(payload)
-      })
-      .then(res => res.json())
-      .then(data => {
+    async function sendToSheet(payload, skipRefresh = false) {
+      const bodyStr = JSON.stringify(payload);
+      try {
+        let res;
+        try {
+          res = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: bodyStr
+          });
+        } catch (fetchErr) {
+          console.warn("Proxy post failed, trying direct URL:", fetchErr);
+          res = await fetch(GOOGLE_SCRIPT_DIRECT_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: bodyStr
+          });
+        }
+
+        const data = await res.json();
         showToast("✅ Changes saved to Google Sheet!", "success");
         if (!skipRefresh) fetchDashboardData();
         return data;
-      })
-      .catch(err => {
+      } catch (err) {
         console.error("Backend error:", err);
         showToast("⚠️ Operation saved locally / Retrying...", "warning");
         if (!skipRefresh) fetchDashboardData();
-      });
+      }
     }
 
     function closeModal(modalId) {
@@ -2052,6 +2409,11 @@ ${achievement}
       if (paidInput) paidInput.value = '';
       if (instructionsInput) instructionsInput.value = '';
 
+      const alertBox = document.getElementById('new-job-customer-credit-alert');
+      if (alertBox) alertBox.classList.add('d-none');
+      const badgeEl = document.getElementById('customer-match-badge');
+      if (badgeEl) badgeEl.innerText = '';
+
       const todayStr = getTodayString();
       try {
         await sendToSheet({
@@ -2076,6 +2438,140 @@ ${achievement}
         console.error("Error submitting job:", err);
         fetchDashboardData();
       }
+    }
+
+    // Proactive credit check when entering customer name in New Work Order modal
+    function checkCustomerExistingBalance(customerName) {
+      const alertBox = document.getElementById('new-job-customer-credit-alert');
+      const badgeEl = document.getElementById('customer-match-badge');
+      const waInput = document.getElementById('input-whatsapp');
+      if (!alertBox) return;
+
+      const clean = (customerName || '').trim().toLowerCase();
+      if (!clean || !customerPendingMap[clean]) {
+        alertBox.classList.add('d-none');
+        if (badgeEl) badgeEl.innerText = '';
+        return;
+      }
+
+      const cust = customerPendingMap[clean];
+      if (cust.totalPending > 0) {
+        alertBox.classList.remove('d-none');
+        if (badgeEl) {
+          badgeEl.innerText = `⚠️ Has unpaid balance (Rs. ${cust.totalPending.toLocaleString('en-PK')})`;
+          badgeEl.className = 'text-danger small fw-bold';
+        }
+
+        // Auto-fill WhatsApp number if available and input is currently blank
+        if (waInput && !waInput.value && cust.whatsapp) {
+          waInput.value = cust.whatsapp;
+        }
+
+        document.getElementById('credit-alert-name').innerText = cust.name;
+        const orderCount = cust.orders.length;
+        document.getElementById('credit-alert-details').innerText = 
+          `This customer has ${orderCount} pending order${orderCount > 1 ? 's' : ''} (Oldest: ${cust.oldestDate || 'past date'}).`;
+        document.getElementById('credit-alert-amount').innerText = `Rs. ${cust.totalPending.toLocaleString('en-PK')}`;
+
+        updateNewJobPendingPreview();
+      } else {
+        alertBox.classList.add('d-none');
+        if (badgeEl) badgeEl.innerText = '';
+      }
+    }
+
+    function updateNewJobPendingPreview() {
+      const custName = document.getElementById('input-customer')?.value.trim().toLowerCase();
+      const alertBox = document.getElementById('new-job-customer-credit-alert');
+      const combinedBadge = document.getElementById('credit-alert-combined-total');
+      if (!alertBox || alertBox.classList.contains('d-none') || !combinedBadge) return;
+
+      const totalAmt = parseFloat(document.getElementById('input-total')?.value) || 0;
+      const paidAmt = parseFloat(document.getElementById('input-paid')?.value) || 0;
+      const thisOrderPending = Math.max(0, totalAmt - paidAmt);
+
+      const existingPending = (customerPendingMap[custName]?.totalPending) || 0;
+      const grandCombined = existingPending + thisOrderPending;
+      combinedBadge.innerText = `Total Balance With This Order: Rs. ${grandCombined.toLocaleString('en-PK')}`;
+    }
+
+    let activeCustomerStatementKey = '';
+
+    function openCustomerStatementModal(customerKey) {
+      activeCustomerStatementKey = customerKey;
+      const cust = customerPendingMap[customerKey];
+      if (!cust) return;
+
+      document.getElementById('statement-customer-name').innerText = cust.name;
+      document.getElementById('statement-customer-phone').innerText = cust.whatsapp ? `Phone: ${cust.whatsapp}` : 'Phone: None saved';
+      document.getElementById('statement-customer-total').innerText = `Rs. ${cust.totalPending.toLocaleString('en-PK')}`;
+      document.getElementById('statement-customer-count').innerText = `${cust.orders.length} Unpaid Orders (Oldest: ${cust.oldestDate || 'past'})`;
+      document.getElementById('statement-orders-badge').innerText = `${cust.orders.length} Orders`;
+
+      // Populate itemized table in statement modal
+      const tbody = document.getElementById('statement-orders-body');
+      if (tbody) {
+        tbody.innerHTML = cust.orders.map(o => `
+          <tr>
+            <td><span class="badge bg-slate-lt text-secondary fw-semibold">${o.date}</span></td>
+            <td><div class="fw-bold text-dark">${o.job}</div></td>
+            <td><span class="badge bg-blue-lt fw-bold">${o.qty}</span></td>
+            <td>Rs. ${o.total.toLocaleString('en-PK')}</td>
+            <td class="text-muted">Rs. ${o.paid.toLocaleString('en-PK')}</td>
+            <td class="text-danger fw-bold">Rs. ${o.pending.toLocaleString('en-PK')}</td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-success px-2 py-0" onclick="closeModal('modal-customer-statement'); openPaymentModal(${o.rowIndex}, 'full')">💵 Pay</button>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      // Generate consolidated statement message for WhatsApp
+      const formattedTotal = cust.totalPending.toLocaleString('en-PK');
+      let orderLines = cust.orders.map(o => `• *${o.job}* (${o.date}): Rs. ${o.pending.toLocaleString('en-PK')}`).join('\n');
+
+      const msg = `Assalam-o-Alaikum *${cust.name}*,\n\nYeh IT Brothers ki taraf se aap ke accounts/orders ke baqaya waajibat (Total Outstanding Balance) ki aik mukammal tafseel (Account Statement) hai:\n\n*Baqaya Orders Breakdown:*\n${orderLines}\n\n*Grand Total Baqaya Rakam: Rs. ${formattedTotal}*\n\nBaraye meherbani yeh baqaya rakam jald se jald ada kar dein taake aap ka account clear ho sake. Shukriya!\n\n*IT Brothers*\n🌐 www.itbrothers.pk\n📍 Muslimabad Parmoli Tehsil Razzar District Swabi`;
+
+      const previewArea = document.getElementById('statement-wa-preview');
+      if (previewArea) previewArea.value = msg;
+
+      const modalEl = document.getElementById('modal-customer-statement');
+      bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+
+    function copyStatementText() {
+      const previewArea = document.getElementById('statement-wa-preview');
+      if (previewArea) {
+        copyToClipboard(previewArea.value);
+        showToast("📋 Consolidated account statement copied to clipboard!", "success");
+      }
+    }
+
+    function openStatementWhatsApp(channel = 'desktop') {
+      const cust = customerPendingMap[activeCustomerStatementKey];
+      const previewArea = document.getElementById('statement-wa-preview');
+      const message = previewArea ? previewArea.value : '';
+      copyToClipboard(message);
+
+      const waNum = cust ? formatWhatsAppNumber(cust.whatsapp) : '';
+      const encodedMsg = encodeURIComponent(message);
+
+      if (channel === 'web') {
+        const url = waNum 
+          ? `https://web.whatsapp.com/send?phone=${waNum}&text=${encodedMsg}`
+          : `https://web.whatsapp.com/send?text=${encodedMsg}`;
+        window.open(url, '_blank');
+      } else {
+        const url = waNum
+          ? `whatsapp://send?phone=${waNum}&text=${encodedMsg}`
+          : `whatsapp://send?text=${encodedMsg}`;
+        try {
+          triggerProtocolUrl(url);
+        } catch (e) {
+          console.log(e);
+        }
+      }
+      showToast("💬 Opening WhatsApp with full statement...", "success");
     }
 
     async function submitNewSale() {
