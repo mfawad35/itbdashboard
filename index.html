@@ -350,10 +350,10 @@
 
 <body class="theme-light">
   <script>
-    // Uses local Express server-side proxy by default to prevent CORS/redirect issues in browser and iframe environments,
-    // while maintaining direct Google Script URL as fallback.
+    // Primary Google Apps Script Web App URL (works directly in Desktop apps, Electron, and Web browsers)
     const GOOGLE_SCRIPT_DIRECT_URL = "https://script.google.com/macros/s/AKfycbzNtkplZTaCjRiRHofsfIgGINhX3W2ZF0HgV6xHdG0JzsLi8I8KbwG-dpH2TY_DtKa3/exec";
-    const API_URL = "/api/sheet";
+    const API_URL = GOOGLE_SCRIPT_DIRECT_URL;
+    const LOCAL_PROXY_URL = "/api/sheet";
   </script>
 
   <!-- Toast Container for Non-blocking Alerts -->
@@ -1441,31 +1441,54 @@
     async function fetchDashboardData() {
       const btn = document.getElementById('btn-refresh');
       if(btn) btn.innerText = "⏳ Loading...";
-      try {
-        let res;
-        try {
-          res = await fetch(API_URL);
-        } catch (fetchErr) {
-          console.warn("Proxy fetch failed, trying direct URL:", fetchErr);
-          res = await fetch(GOOGLE_SCRIPT_DIRECT_URL);
-        }
 
-        if (!res.ok && res.status >= 500) {
-          // Fallback to direct script url if proxy responded with server error
-          res = await fetch(GOOGLE_SCRIPT_DIRECT_URL);
-        }
-
-        const data = await res.json();
-        if (data && typeof data === 'object') {
-          globalData = data;
-          renderDashboard(globalData);
-        }
-      } catch (e) {
-        console.error("Error fetching data:", e);
-        showToast("⚠️ Could not sync with Google Sheet server. Check internet connection.", "warning");
-      } finally {
-        if(btn) btn.innerText = "🔄 Refresh Data";
+      // Endpoints to try: Direct Google Script Web App URL first (desktop app / Electron),
+      // then local proxy if running on a web server with /api/sheet
+      const endpoints = [GOOGLE_SCRIPT_DIRECT_URL];
+      if (window.location.protocol.startsWith('http') && window.location.origin && window.location.origin !== 'null') {
+        endpoints.push(LOCAL_PROXY_URL);
       }
+
+      let fetchedData = null;
+      let lastError = null;
+
+      for (const url of endpoints) {
+        try {
+          const res = await fetch(url, {
+            method: 'GET',
+            cache: 'no-cache'
+          });
+
+          if (!res.ok) {
+            console.warn(`Endpoint ${url} responded with status ${res.status}`);
+            continue;
+          }
+
+          const text = await res.text();
+          try {
+            const data = JSON.parse(text);
+            if (data && typeof data === 'object' && (data.jobs || data.sales || data.expenses)) {
+              fetchedData = data;
+              break; // Success!
+            }
+          } catch (parseErr) {
+            console.warn(`Endpoint ${url} did not return valid JSON:`, text.substring(0, 100));
+          }
+        } catch (err) {
+          lastError = err;
+          console.warn(`Failed fetching from ${url}:`, err);
+        }
+      }
+
+      if (fetchedData) {
+        globalData = fetchedData;
+        renderDashboard(globalData);
+      } else {
+        console.error("Error fetching data from Google Sheet:", lastError);
+        showToast("⚠️ Could not sync with Google Sheet server. Check internet connection.", "warning");
+      }
+
+      if(btn) btn.innerText = "🔄 Refresh Data";
     }
 
     function updateLiveDateTime() {
@@ -2092,30 +2115,47 @@
 
     async function sendToSheet(payload, skipRefresh = false) {
       const bodyStr = JSON.stringify(payload);
-      try {
-        let res;
-        try {
-          res = await fetch(API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: bodyStr
-          });
-        } catch (fetchErr) {
-          console.warn("Proxy post failed, trying direct URL:", fetchErr);
-          res = await fetch(GOOGLE_SCRIPT_DIRECT_URL, {
-            method: "POST",
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: bodyStr
-          });
-        }
+      const endpoints = [GOOGLE_SCRIPT_DIRECT_URL];
+      if (window.location.protocol.startsWith('http') && window.location.origin && window.location.origin !== 'null') {
+        endpoints.push(LOCAL_PROXY_URL);
+      }
 
-        const data = await res.json();
+      let savedData = null;
+      let lastError = null;
+
+      for (const url of endpoints) {
+        try {
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: bodyStr
+          });
+
+          if (!res.ok) {
+            console.warn(`POST to ${url} returned status ${res.status}`);
+            continue;
+          }
+
+          const text = await res.text();
+          try {
+            savedData = JSON.parse(text);
+          } catch {
+            savedData = { status: "success", raw: text };
+          }
+          break; // Saved successfully!
+        } catch (err) {
+          lastError = err;
+          console.warn(`POST to ${url} failed:`, err);
+        }
+      }
+
+      if (savedData) {
         showToast("✅ Changes saved to Google Sheet!", "success");
         if (!skipRefresh) fetchDashboardData();
-        return data;
-      } catch (err) {
-        console.error("Backend error:", err);
-        showToast("⚠️ Operation saved locally / Retrying...", "warning");
+        return savedData;
+      } else {
+        console.error("Backend error saving to sheet:", lastError);
+        showToast("⚠️ Could not save to Google Sheet. Check internet connection.", "danger");
         if (!skipRefresh) fetchDashboardData();
       }
     }
