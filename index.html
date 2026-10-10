@@ -994,6 +994,24 @@
             </div>
           </div>
 
+          <!-- Customer-level payment allocation: oldest unpaid orders first -->
+          <div class="card mb-3 border border-success">
+            <div class="card-body p-3">
+              <div class="fw-bold text-success mb-1">💵 Record One Customer Payment</div>
+              <div class="text-muted small mb-2">Enter the total amount received. It will be applied to the oldest outstanding orders first. This is for customer account payments; COD settlements remain on the individual order.</div>
+              <div class="row g-2 align-items-end">
+                <div class="col-sm-7">
+                  <label class="form-label" for="customer-account-payment-amount">Amount received (Rs.)</label>
+                  <input type="number" class="form-control" id="customer-account-payment-amount" min="1" step="1" placeholder="e.g. 1000">
+                </div>
+                <div class="col-sm-5 d-grid">
+                  <button type="button" class="btn btn-success" onclick="submitCustomerAccountPayment()">Allocate & Record Payment</button>
+                </div>
+              </div>
+              <div class="small text-muted mt-2" id="customer-account-payment-preview">Payment will be allocated by order date, oldest first.</div>
+            </div>
+          </div>
+
           <div class="card mb-3 border">
             <div class="card-header py-2 bg-light d-flex justify-content-between align-items-center">
               <span class="fw-bold small text-secondary">Breakdown of Unpaid Work Orders</span>
@@ -2150,6 +2168,11 @@
       }
 
       if (savedData) {
+        if (savedData.status === 'error') {
+          showToast(`⚠️ ${savedData.message || 'Google Sheets rejected the change.'}`, "danger");
+          if (!skipRefresh) fetchDashboardData();
+          return savedData;
+        }
         showToast("✅ Changes saved to Google Sheet!", "success");
         if (!skipRefresh) fetchDashboardData();
         return savedData;
@@ -2547,6 +2570,8 @@ ${achievement}
       document.getElementById('statement-customer-total').innerText = `Rs. ${cust.totalPending.toLocaleString('en-PK')}`;
       document.getElementById('statement-customer-count').innerText = `${cust.orders.length} Unpaid Orders (Oldest: ${cust.oldestDate || 'past'})`;
       document.getElementById('statement-orders-badge').innerText = `${cust.orders.length} Orders`;
+      const accountPaymentInput = document.getElementById('customer-account-payment-amount');
+      if (accountPaymentInput) accountPaymentInput.value = '';
 
       // Populate itemized table in statement modal
       const tbody = document.getElementById('statement-orders-body');
@@ -2577,6 +2602,45 @@ ${achievement}
 
       const modalEl = document.getElementById('modal-customer-statement');
       bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+
+    async function submitCustomerAccountPayment() {
+      const cust = customerPendingMap[activeCustomerStatementKey];
+      const amount = Number(document.getElementById('customer-account-payment-amount')?.value);
+      if (!cust) {
+        showToast('Customer account could not be identified. Please reopen the ledger.', 'danger');
+        return;
+      }
+      if (!Number.isFinite(amount) || amount <= 0) {
+        showToast('Please enter a valid payment amount greater than zero.', 'danger');
+        return;
+      }
+      if (amount > cust.totalPending) {
+        showToast(`Payment exceeds outstanding balance of Rs. ${cust.totalPending.toLocaleString('en-PK')}. Please check the amount.`, 'danger');
+        return;
+      }
+      if (!confirm(`Record Rs. ${amount.toLocaleString('en-PK')} from ${cust.name}?\n\nIt will be allocated to the oldest unpaid orders first and recorded as one customer payment.`)) return;
+
+      const button = document.querySelector('#modal-customer-statement button[onclick="submitCustomerAccountPayment()"]');
+      if (button) { button.disabled = true; button.textContent = 'Saving payment…'; }
+      try {
+        const result = await sendToSheet({
+          action: 'allocateCustomerPayment',
+          customer: cust.name,
+          whatsapp: cust.whatsapp || '',
+          amountPaid: amount,
+          date: getTodayString(),
+          paymentType: 'Customer Account Payment (Oldest First)'
+        }, true);
+        if (result && result.status === 'success') {
+          document.getElementById('customer-account-payment-amount').value = '';
+          closeModal('modal-customer-statement');
+          await fetchDashboardData();
+          showToast(`Payment of Rs. ${amount.toLocaleString('en-PK')} allocated successfully.`, 'success');
+        }
+      } finally {
+        if (button) { button.disabled = false; button.textContent = 'Allocate & Record Payment'; }
+      }
     }
 
     function copyStatementText() {
