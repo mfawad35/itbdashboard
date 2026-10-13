@@ -1257,6 +1257,10 @@
             <div class="col-lg-3 mb-3">
               <label class="form-label">WhatsApp Number</label>
               <input type="tel" id="edit-job-whatsapp" class="form-control" placeholder="e.g. 0300-1234567">
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" id="edit-job-update-all-phones" checked>
+                <label class="form-check-label small" for="edit-job-update-all-phones">Update this customer's number on all orders with the same customer name</label>
+              </div>
             </div>
             <div class="col-lg-3 mb-3">
               <label class="form-label">Job Description</label>
@@ -2748,6 +2752,7 @@ ${achievement}
       document.getElementById('edit-job-date').value = getLocalDateString(item["Date"]);
       document.getElementById('edit-job-customer').value = item["Customer Name"] || '';
       document.getElementById('edit-job-whatsapp').value = item["WhatsApp Number"] || item["WhatsApp"] || item["Phone"] || item["Phone Number"] || '';
+      document.getElementById('edit-job-update-all-phones').checked = true;
       document.getElementById('edit-job-desc').value = item["Job Description"] || '';
       document.getElementById('edit-job-qty').value = item["Quantity"] || item["Qty"] || 1;
       document.getElementById('edit-job-total').value = item["Total Amount"] || 0;
@@ -2800,14 +2805,25 @@ ${achievement}
       const status = document.getElementById('edit-job-status').value;
       const priority = document.getElementById('edit-job-priority').value;
       const instructions = document.getElementById('edit-job-instructions').value;
-
-      closeModal('modal-edit-job');
+      const updateAllCustomerPhones = document.getElementById('edit-job-update-all-phones').checked;
+      const normalizedName = String(customer || '').trim().toLocaleLowerCase();
+      const matchingOrders = globalData.jobs.filter(order => String(order["Customer Name"] || '').trim().toLocaleLowerCase() === normalizedName);
+      if (updateAllCustomerPhones && matchingOrders.length > 1) {
+        const confirmed = window.confirm(`This will update the WhatsApp number on ${matchingOrders.length} orders for "${customer}". Continue?`);
+        if (!confirmed) return;
+      }
 
       try {
-        await sendToSheet({
+        const result = await sendToSheet({
           action: 'updateJob',
-          rowIndex, date, customer, whatsapp, job, quantity: qty, total, paid, status, priority, instructions
-        });
+          rowIndex, date, customer, whatsapp, job, quantity: qty, total, paid, status, priority, instructions,
+          updateAllCustomerPhones
+        }, true);
+        if (result && result.status === 'success') {
+          closeModal('modal-edit-job');
+          showToast(result.message || 'Work order updated successfully.', 'success');
+          fetchDashboardData();
+        }
       } catch (err) {
         console.error("Error editing job:", err);
       }
