@@ -391,7 +391,6 @@
           </div>
 
           <div class="navbar-nav flex-row order-lg-last ms-auto gap-2">
-            <button onclick="openAttendance()" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1 shadow-sm"><span>🗓️</span><span>Attendance & Salary</span></button>
             <button onclick="openReportModal()" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1 shadow-sm">
               <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="18" height="18" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" /><path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z" /><path d="M9 14l2 2l4 -4" /></svg>
               <span>Advisor Report</span>
@@ -469,52 +468,6 @@
     <div class="page-wrapper">
       <div class="page-body">
         <div class="container-xl">
-
-          <!-- Owner-only Attendance & Salary panel -->
-          <section id="attendance-panel" class="mb-4" style="display:none">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-              <div><h2 class="h2 mb-1">Employee Attendance & Salary</h2><div class="text-muted">Owner-only section · Full day Rs. 400 · Half day Rs. 200</div></div>
-              <div class="d-flex gap-2"><button class="btn btn-outline-secondary" onclick="closeAttendance()">Back to Dashboard</button><button class="btn btn-primary" onclick="loadAttendance()">Refresh</button></div>
-            </div>
-            <div id="attendance-auth" class="card p-4 mb-3">
-              <h3 class="h3">Owner access</h3><p class="text-muted">Enter the attendance PIN configured in Google Apps Script. It is checked by the backend and is not saved in the browser.</p>
-              <div class="row g-2 align-items-end"><div class="col-sm-5"><label class="form-label" for="attendance-pin">Owner PIN</label><input id="attendance-pin" type="password" class="form-control" autocomplete="current-password" placeholder="Enter owner PIN"></div><div class="col-auto"><button class="btn btn-primary" onclick="unlockAttendance()">Unlock section</button></div></div>
-              <div class="small text-muted mt-2">Setup required once: Apps Script → Project Settings → Script Properties → add <code>ITB_ATTENDANCE_PIN</code>.</div>
-            </div>
-            <div id="attendance-workspace" style="display:none">
-              <div class="row row-cards mb-3">
-                <div class="col-sm-6 col-lg-3"><div class="card card-sm"><div class="card-body"><div class="text-muted">Earned this month</div><div id="att-earned" class="h1 mb-0">Rs. 0</div></div></div></div>
-                <div class="col-sm-6 col-lg-3"><div class="card card-sm"><div class="card-body"><div class="text-muted">Daily cash paid</div><div id="att-daily-paid" class="h1 mb-0">Rs. 0</div></div></div></div>
-                <div class="col-sm-6 col-lg-3"><div class="card card-sm"><div class="card-body"><div class="text-muted">Saved salary balance</div><div id="att-saved" class="h1 mb-0 text-primary">Rs. 0</div></div></div></div>
-                <div class="col-sm-6 col-lg-3"><div class="card card-sm"><div class="card-body"><div class="text-muted">Full / Half days</div><div id="att-days" class="h1 mb-0">0 / 0</div></div></div></div>
-              </div>
-              <div class="row row-cards mb-3">
-                <div class="col-lg-5"><div class="card h-100"><div class="card-header"><h3 class="card-title">Mark attendance</h3></div><div class="card-body">
-                  <div class="mb-3"><label class="form-label">Date</label><input type="date" id="att-date" class="form-control"></div>
-                  <div class="mb-3"><label class="form-label">Employee</label><select id="att-employee" class="form-select"></select></div>
-                  <div class="mb-3"><label class="form-label">Attendance</label><select id="att-status" class="form-select" onchange="updateAttendancePreview()"><option>Full Day</option><option>Half Day</option><option>Absent</option><option>Leave</option></select></div>
-                  <div class="alert alert-info py-2"><div class="d-flex justify-content-between"><span>Earned</span><strong id="att-preview-earned">Rs. 400</strong></div><div class="d-flex justify-content-between"><span>Cash paid today</span><strong id="att-preview-paid">Rs. 100</strong></div><div class="d-flex justify-content-between"><span>Saved</span><strong id="att-preview-saved">Rs. 300</strong></div></div>
-                  <div class="mb-3"><label class="form-label">Notes (optional)</label><input id="att-notes" class="form-control" placeholder="e.g. college in first half"></div>
-                  <button class="btn btn-primary w-100" onclick="saveAttendance()">Save attendance</button>
-                </div></div></div>
-                <div class="col-lg-7"><div class="card h-100"><div class="card-header"><h3 class="card-title">Employee management</h3></div><div class="card-body">
-                  <form class="row g-2 align-items-end" onsubmit="addEmployee(event)"><div class="col-sm-8"><label class="form-label">New employee name</label><input id="att-new-name" class="form-control" required maxlength="100" placeholder="Employee full name"></div><div class="col-sm-4"><button class="btn btn-success w-100" type="submit">Add employee</button></div></form>
-                  <hr><div id="att-employee-list" class="list-group list-group-flush"></div>
-                  <p class="small text-muted mt-2 mb-0">Removing an employee archives them from future attendance; previous records and salary history remain intact.</p>
-                </div></div></div>
-              </div>
-              <div class="row row-cards mb-3"><div class="col-lg-5"><div class="card"><div class="card-header"><h3 class="card-title">Month-end salary payment</h3></div><div class="card-body">
-                <div class="mb-3"><label class="form-label">Employee</label><select id="att-pay-employee" class="form-select"></select></div>
-                <div class="mb-3"><label class="form-label">Payment date</label><input type="date" id="att-pay-date" class="form-control"></div>
-                <div class="mb-3"><label class="form-label">Amount paid (Rs.)</label><input type="number" id="att-pay-amount" class="form-control" min="1" step="1" required></div>
-                <div class="mb-3"><label class="form-label">Note (optional)</label><input id="att-pay-notes" class="form-control" placeholder="Month-end settlement"></div>
-                <button class="btn btn-success w-100" onclick="paySavedSalary()">Record salary payment</button>
-                <p class="small text-muted mt-2">Records a payment against saved salary; it does not create a business expense automatically.</p>
-              </div></div></div><div class="col-lg-7"><div class="card"><div class="card-header d-flex justify-content-between"><h3 class="card-title">Monthly summary</h3><input type="month" id="att-month" class="form-control form-control-sm" style="max-width:180px" onchange="renderAttendance()"></div><div class="table-responsive"><table class="table table-vcenter"><thead><tr><th>Employee</th><th>Full</th><th>Half</th><th>Absent/Leave</th><th>Earned</th><th>Daily paid</th><th>Saved due</th></tr></thead><tbody id="att-summary-body"><tr><td colspan="7" class="text-muted text-center">Unlock to load records</td></tr></tbody></table></div></div></div></div>
-              <div class="card mb-4"><div class="card-header"><h3 class="card-title">Attendance history</h3></div><div class="table-responsive"><table class="table table-vcenter"><thead><tr><th>Date</th><th>Employee</th><th>Status</th><th>Earned</th><th>Paid daily</th><th>Saved</th><th>Notes</th></tr></thead><tbody id="att-history-body"></tbody></table></div></div>
-              <div class="card mb-4"><div class="card-header"><h3 class="card-title">Month-end payment history</h3></div><div class="table-responsive"><table class="table table-vcenter"><thead><tr><th>Date</th><th>Employee</th><th>Amount</th><th>Note</th></tr></thead><tbody id="att-payments-body"></tbody></table></div></div>
-            </div>
-          </section>
 
           <!-- Panel 1: Live Work Queue -->
           <div class="row row-cards mb-4">
@@ -1041,6 +994,24 @@
             </div>
           </div>
 
+          <!-- Customer-level payment allocation: oldest unpaid orders first -->
+          <div class="card mb-3 border border-success">
+            <div class="card-body p-3">
+              <div class="fw-bold text-success mb-1">💵 Record One Customer Payment</div>
+              <div class="text-muted small mb-2">Enter the total amount received. It will be applied to the oldest outstanding orders first. This is for customer account payments; COD settlements remain on the individual order.</div>
+              <div class="row g-2 align-items-end">
+                <div class="col-sm-7">
+                  <label class="form-label" for="customer-account-payment-amount">Amount received (Rs.)</label>
+                  <input type="number" class="form-control" id="customer-account-payment-amount" min="1" step="1" placeholder="e.g. 1000">
+                </div>
+                <div class="col-sm-5 d-grid">
+                  <button type="button" class="btn btn-success" onclick="submitCustomerAccountPayment()">Allocate & Record Payment</button>
+                </div>
+              </div>
+              <div class="small text-muted mt-2" id="customer-account-payment-preview">Payment will be allocated by order date, oldest first.</div>
+            </div>
+          </div>
+
           <div class="card mb-3 border">
             <div class="card-header py-2 bg-light d-flex justify-content-between align-items-center">
               <span class="fw-bold small text-secondary">Breakdown of Unpaid Work Orders</span>
@@ -1286,6 +1257,10 @@
             <div class="col-lg-3 mb-3">
               <label class="form-label">WhatsApp Number</label>
               <input type="tel" id="edit-job-whatsapp" class="form-control" placeholder="e.g. 0300-1234567">
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" id="edit-job-update-all-phones">
+                <label class="form-check-label small" for="edit-job-update-all-phones">Update this customer's number on all orders with the same customer name</label>
+              </div>
             </div>
             <div class="col-lg-3 mb-3">
               <label class="form-label">Job Description</label>
@@ -2197,6 +2172,11 @@
       }
 
       if (savedData) {
+        if (savedData.status === 'error') {
+          showToast(`⚠️ ${savedData.message || 'Google Sheets rejected the change.'}`, "danger");
+          if (!skipRefresh) fetchDashboardData();
+          return savedData;
+        }
         showToast("✅ Changes saved to Google Sheet!", "success");
         if (!skipRefresh) fetchDashboardData();
         return savedData;
@@ -2594,6 +2574,8 @@ ${achievement}
       document.getElementById('statement-customer-total').innerText = `Rs. ${cust.totalPending.toLocaleString('en-PK')}`;
       document.getElementById('statement-customer-count').innerText = `${cust.orders.length} Unpaid Orders (Oldest: ${cust.oldestDate || 'past'})`;
       document.getElementById('statement-orders-badge').innerText = `${cust.orders.length} Orders`;
+      const accountPaymentInput = document.getElementById('customer-account-payment-amount');
+      if (accountPaymentInput) accountPaymentInput.value = '';
 
       // Populate itemized table in statement modal
       const tbody = document.getElementById('statement-orders-body');
@@ -2624,6 +2606,45 @@ ${achievement}
 
       const modalEl = document.getElementById('modal-customer-statement');
       bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+
+    async function submitCustomerAccountPayment() {
+      const cust = customerPendingMap[activeCustomerStatementKey];
+      const amount = Number(document.getElementById('customer-account-payment-amount')?.value);
+      if (!cust) {
+        showToast('Customer account could not be identified. Please reopen the ledger.', 'danger');
+        return;
+      }
+      if (!Number.isFinite(amount) || amount <= 0) {
+        showToast('Please enter a valid payment amount greater than zero.', 'danger');
+        return;
+      }
+      if (amount > cust.totalPending) {
+        showToast(`Payment exceeds outstanding balance of Rs. ${cust.totalPending.toLocaleString('en-PK')}. Please check the amount.`, 'danger');
+        return;
+      }
+      if (!confirm(`Record Rs. ${amount.toLocaleString('en-PK')} from ${cust.name}?\n\nIt will be allocated to the oldest unpaid orders first and recorded as one customer payment.`)) return;
+
+      const button = document.querySelector('#modal-customer-statement button[onclick="submitCustomerAccountPayment()"]');
+      if (button) { button.disabled = true; button.textContent = 'Saving payment…'; }
+      try {
+        const result = await sendToSheet({
+          action: 'allocateCustomerPayment',
+          customer: cust.name,
+          whatsapp: cust.whatsapp || '',
+          amountPaid: amount,
+          date: getTodayString(),
+          paymentType: 'Customer Account Payment (Oldest First)'
+        }, true);
+        if (result && result.status === 'success') {
+          document.getElementById('customer-account-payment-amount').value = '';
+          closeModal('modal-customer-statement');
+          await fetchDashboardData();
+          showToast(`Payment of Rs. ${amount.toLocaleString('en-PK')} allocated successfully.`, 'success');
+        }
+      } finally {
+        if (button) { button.disabled = false; button.textContent = 'Allocate & Record Payment'; }
+      }
     }
 
     function copyStatementText() {
@@ -2731,6 +2752,7 @@ ${achievement}
       document.getElementById('edit-job-date').value = getLocalDateString(item["Date"]);
       document.getElementById('edit-job-customer').value = item["Customer Name"] || '';
       document.getElementById('edit-job-whatsapp').value = item["WhatsApp Number"] || item["WhatsApp"] || item["Phone"] || item["Phone Number"] || '';
+      document.getElementById('edit-job-update-all-phones').checked = false;
       document.getElementById('edit-job-desc').value = item["Job Description"] || '';
       document.getElementById('edit-job-qty').value = item["Quantity"] || item["Qty"] || 1;
       document.getElementById('edit-job-total').value = item["Total Amount"] || 0;
@@ -2783,14 +2805,34 @@ ${achievement}
       const status = document.getElementById('edit-job-status').value;
       const priority = document.getElementById('edit-job-priority').value;
       const instructions = document.getElementById('edit-job-instructions').value;
-
-      closeModal('modal-edit-job');
+      const updateAllCustomerPhonesRequested = document.getElementById('edit-job-update-all-phones').checked;
+      const originalOrder = globalData.jobs.find(order => Number(order.rowIndex) === Number(rowIndex));
+      const oldWhatsapp = String(originalOrder?.["WhatsApp Number"] || originalOrder?.["WhatsApp"] || originalOrder?.["Phone"] || originalOrder?.["Phone Number"] || '').trim();
+      const digitsOnly = value => String(value || '').replace(/\D/g, '');
+      const whatsappChanged = digitsOnly(whatsapp) !== digitsOnly(oldWhatsapp);
+      const updateAllCustomerPhones = whatsappChanged && updateAllCustomerPhonesRequested;
+      const normalizedName = String(customer || '').trim().toLocaleLowerCase();
+      const matchingOrders = globalData.jobs.filter(order => String(order["Customer Name"] || '').trim().toLocaleLowerCase() === normalizedName);
+      if (whatsappChanged && !whatsapp) {
+        showToast('WhatsApp number cannot be blank. Enter the correct number or keep the existing number.', 'error');
+        return;
+      }
+      if (updateAllCustomerPhones && matchingOrders.length > 1) {
+        const confirmed = window.confirm(`You changed the WhatsApp number. Update it on ${matchingOrders.length} orders for "${customer}"? This only changes saved numbers and will not send WhatsApp notifications.`);
+        if (!confirmed) return;
+      }
 
       try {
-        await sendToSheet({
+        const result = await sendToSheet({
           action: 'updateJob',
-          rowIndex, date, customer, whatsapp, job, quantity: qty, total, paid, status, priority, instructions
-        });
+          rowIndex, date, customer, whatsapp, job, quantity: qty, total, paid, status, priority, instructions,
+          updateAllCustomerPhones
+        }, true);
+        if (result && result.status === 'success') {
+          closeModal('modal-edit-job');
+          showToast(result.message || 'Work order updated successfully.', 'success');
+          fetchDashboardData();
+        }
       } catch (err) {
         console.error("Error editing job:", err);
       }
@@ -2840,21 +2882,18 @@ ${achievement}
       sendToSheet({ action: 'updateStatus', rowIndex: rowIndex, status: status });
     }
 
-    // Converts Pakistani local numbers to +92, while preserving international codes
-    // such as Qatar +974. For Qatar, save the complete number including 974.
-    // WhatsApp gateway receives digits only (no + symbol).
+    // Normalizes a locally-entered WhatsApp number (e.g. "0300-1234567") into
+    // the international digits-only format WhatsApp's links expect (e.g. "923001234567").
+    // Returns '' if no usable number was found.
     function formatWhatsAppNumber(raw) {
       if (!raw) return '';
-      let digits = String(raw).replace(/[^\d]/g, '');
+      let digits = String(raw).replace(/[^\d+]/g, '').replace(/^\+/, '');
       if (!digits) return '';
-      if (digits.startsWith('00')) digits = digits.substring(2);
-      if (/^03\d{9}$/.test(digits)) {
-        digits = '92' + digits.substring(1);
-      } else if (/^3\d{9}$/.test(digits)) {
-        digits = '92' + digits;
+      if (digits.startsWith('0')) {
+        digits = '92' + digits.substring(1); // local Pakistani format -> country code 92
+      } else if (digits.length === 10 && !digits.startsWith('92')) {
+        digits = '92' + digits; // 10-digit number missing both the leading 0 and country code
       }
-      // Don't silently prepend Pakistan's code to foreign numbers.
-      if (digits.startsWith('0') || digits.length < 8 || digits.length > 15) return '';
       return digits;
     }
 
@@ -2967,78 +3006,6 @@ ${achievement}
         bootstrap.Modal.getOrCreateInstance(modalEl).show();
       }
     }
-
-    // Attendance feature: salary rules are enforced again by Apps Script.
-    let attendancePin = '';
-    let attendanceData = { employees: [], attendance: [], payments: [] };
-    function attendanceToday() { return new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Karachi'}); }
-    function openAttendance() {
-      document.getElementById('attendance-panel').style.display = 'block';
-      document.querySelector('.page-wrapper').style.display = 'none';
-      document.querySelector('.top-dashboard-header').style.display = 'none';
-      const today = attendanceToday();
-      ['att-date','att-pay-date'].forEach(id => { if (!document.getElementById(id).value) document.getElementById(id).value=today; });
-      if (!document.getElementById('att-month').value) document.getElementById('att-month').value=today.slice(0,7);
-      document.getElementById('attendance-pin').focus();
-    }
-    function closeAttendance() {
-      document.getElementById('attendance-panel').style.display='none';
-      document.querySelector('.page-wrapper').style.display='';
-      document.querySelector('.top-dashboard-header').style.display='';
-      attendancePin=''; document.getElementById('attendance-pin').value='';
-      document.getElementById('attendance-workspace').style.display='none';
-      document.getElementById('attendance-auth').style.display='';
-    }
-    async function attendanceRequest(action, extra={}) {
-      const response = await fetch(GOOGLE_SCRIPT_DIRECT_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify({action, pin:attendancePin, ...extra})});
-      const result = await response.json();
-      if (!result || result.status==='error' || result.ok===false) throw new Error(result.message || 'Attendance request failed.');
-      return result;
-    }
-    async function unlockAttendance() {
-      const pin = document.getElementById('attendance-pin').value.trim();
-      if (!pin) return showToast('Enter the owner PIN first.', 'warning');
-      attendancePin=pin;
-      try {
-        const data=await attendanceRequest('attendanceGet');
-        attendanceData=data.data || data;
-        document.getElementById('attendance-auth').style.display='none';
-        document.getElementById('attendance-workspace').style.display='';
-        renderAttendance(); showToast('Attendance section unlocked.', 'success');
-      } catch(e) { attendancePin=''; showToast(e.message || 'Could not unlock attendance.', 'danger'); }
-    }
-    function moneyAtt(n) { return 'Rs. '+(Number(n)||0).toLocaleString('en-PK'); }
-    function updateAttendancePreview() {
-      const v=document.getElementById('att-status').value;
-      const earned=v==='Full Day'?400:v==='Half Day'?200:0;
-      const paid=earned?100:0; const saved=earned-paid;
-      document.getElementById('att-preview-earned').textContent=moneyAtt(earned);
-      document.getElementById('att-preview-paid').textContent=moneyAtt(paid);
-      document.getElementById('att-preview-saved').textContent=moneyAtt(saved);
-    }
-    function renderAttendance() {
-      const active=attendanceData.employees.filter(e=>String(e.Active).toLowerCase()!=='false' && String(e.Active)!=='0');
-      const opts=active.map(e=>`<option value="${escapeAtt(e.EmployeeID)}">${escapeAtt(e.Name)}</option>`).join('');
-      ['att-employee','att-pay-employee'].forEach(id=>{const el=document.getElementById(id), old=el.value;el.innerHTML=opts || '<option value="">Add an employee first</option>'; if(active.some(e=>String(e.EmployeeID)===old))el.value=old;});
-      document.getElementById('att-employee-list').innerHTML=active.map(e=>`<div class="list-group-item d-flex justify-content-between align-items-center"><span class="fw-semibold">${escapeAtt(e.Name)}</span><button class="btn btn-sm btn-outline-danger" onclick="removeEmployee('${escapeAtt(e.EmployeeID)}','${escapeAtt(e.Name)}')">Remove</button></div>`).join('') || '<div class="text-muted py-2">No active employees yet.</div>';
-      const month=document.getElementById('att-month').value || attendanceToday().slice(0,7);
-      const rows=attendanceData.attendance.filter(a=>String(a.Date).slice(0,7)===month);
-      const payments=attendanceData.payments.filter(p=>String(p.Date).slice(0,7)===month);
-      const summaries=active.map(e=>{const erows=rows.filter(a=>String(a.EmployeeID)===String(e.EmployeeID));const full=erows.filter(a=>a.Status==='Full Day').length, half=erows.filter(a=>a.Status==='Half Day').length, abs=erows.filter(a=>['Absent','Leave'].includes(a.Status)).length;const earned=erows.reduce((s,a)=>s+Number(a.Earned||0),0), daily=erows.reduce((s,a)=>s+Number(a.DailyPaid||0),0), saved=erows.reduce((s,a)=>s+Number(a.Saved||0),0), monthPaid=payments.filter(p=>String(p.EmployeeID)===String(e.EmployeeID)).reduce((s,p)=>s+Number(p.Amount||0),0);return {e,full,half,abs,earned,daily,saved:Math.max(0,saved-monthPaid)};});
-      const total=summaries.reduce((s,x)=>({earned:s.earned+x.earned,daily:s.daily+x.daily,saved:s.saved+x.saved,full:s.full+x.full,half:s.half+x.half}),{earned:0,daily:0,saved:0,full:0,half:0});
-      document.getElementById('att-earned').textContent=moneyAtt(total.earned);document.getElementById('att-daily-paid').textContent=moneyAtt(total.daily);document.getElementById('att-saved').textContent=moneyAtt(total.saved);document.getElementById('att-days').textContent=`${total.full} / ${total.half}`;
-      document.getElementById('att-summary-body').innerHTML=summaries.map(x=>`<tr><td>${escapeAtt(x.e.Name)}</td><td>${x.full}</td><td>${x.half}</td><td>${x.abs}</td><td>${moneyAtt(x.earned)}</td><td>${moneyAtt(x.daily)}</td><td class="fw-bold">${moneyAtt(x.saved)}</td></tr>`).join('') || '<tr><td colspan="7" class="text-center text-muted">No employees</td></tr>';
-      document.getElementById('att-history-body').innerHTML=rows.slice().sort((a,b)=>String(b.Date).localeCompare(String(a.Date))).map(a=>`<tr><td>${escapeAtt(a.Date)}</td><td>${escapeAtt(a.Name)}</td><td>${escapeAtt(a.Status)}</td><td>${moneyAtt(a.Earned)}</td><td>${moneyAtt(a.DailyPaid)}</td><td>${moneyAtt(a.Saved)}</td><td>${escapeAtt(a.Notes||'')}</td></tr>`).join('') || '<tr><td colspan="7" class="text-center text-muted">No attendance for this month</td></tr>';
-      document.getElementById('att-payments-body').innerHTML=payments.slice().sort((a,b)=>String(b.Date).localeCompare(String(a.Date))).map(p=>`<tr><td>${escapeAtt(p.Date)}</td><td>${escapeAtt(p.Name)}</td><td>${moneyAtt(p.Amount)}</td><td>${escapeAtt(p.Notes||'')}</td></tr>`).join('') || '<tr><td colspan="4" class="text-center text-muted">No month-end payments</td></tr>';
-      updateAttendancePreview();
-    }
-    function escapeAtt(v) { return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-    async function reloadAttendance() { const r=await attendanceRequest('attendanceGet'); attendanceData=r.data||r; renderAttendance(); }
-    async function addEmployee(event) { event.preventDefault(); const name=document.getElementById('att-new-name').value.trim();if(!name)return;try{await attendanceRequest('employeeAdd',{name});document.getElementById('att-new-name').value='';await reloadAttendance();showToast('Employee added.','success');}catch(e){showToast(e.message,'danger');} }
-    async function removeEmployee(id,name) { if(!confirm(`Remove ${name} from active employees? Existing attendance and salary records will be kept.`))return;try{await attendanceRequest('employeeRemove',{employeeId:id});await reloadAttendance();showToast('Employee archived.','success');}catch(e){showToast(e.message,'danger');} }
-    async function saveAttendance() { const employeeId=document.getElementById('att-employee').value;if(!employeeId)return showToast('Add an employee first.','warning');try{await attendanceRequest('attendanceSave',{date:document.getElementById('att-date').value,employeeId,status:document.getElementById('att-status').value,notes:document.getElementById('att-notes').value.trim()});await reloadAttendance();showToast('Attendance saved. Daily cash and saved salary recalculated.','success');}catch(e){showToast(e.message,'danger');} }
-    async function paySavedSalary() { const employeeId=document.getElementById('att-pay-employee').value,amount=Number(document.getElementById('att-pay-amount').value);if(!employeeId||!amount||amount<=0)return showToast('Select an employee and enter a valid amount.','warning');if(!confirm(`Record month-end salary payment of ${moneyAtt(amount)}?`))return;try{await attendanceRequest('salaryPayment',{date:document.getElementById('att-pay-date').value,employeeId,amount,notes:document.getElementById('att-pay-notes').value.trim(),month:document.getElementById('att-month').value});document.getElementById('att-pay-amount').value='';await reloadAttendance();showToast('Salary payment recorded.','success');}catch(e){showToast(e.message,'danger');} }
-    async function loadAttendance(){try{await reloadAttendance();showToast('Attendance records refreshed.','success');}catch(e){showToast(e.message,'danger');}}
 
     function copyWaTextManual() {
       const txtArea = document.getElementById('wa-share-text');
