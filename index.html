@@ -2840,18 +2840,21 @@ ${achievement}
       sendToSheet({ action: 'updateStatus', rowIndex: rowIndex, status: status });
     }
 
-    // Normalizes a locally-entered WhatsApp number (e.g. "0300-1234567") into
-    // the international digits-only format WhatsApp's links expect (e.g. "923001234567").
-    // Returns '' if no usable number was found.
+    // Converts Pakistani local numbers to +92, while preserving international codes
+    // such as Qatar +974. For Qatar, save the complete number including 974.
+    // WhatsApp gateway receives digits only (no + symbol).
     function formatWhatsAppNumber(raw) {
       if (!raw) return '';
-      let digits = String(raw).replace(/[^\d+]/g, '').replace(/^\+/, '');
+      let digits = String(raw).replace(/[^\d]/g, '');
       if (!digits) return '';
-      if (digits.startsWith('0')) {
-        digits = '92' + digits.substring(1); // local Pakistani format -> country code 92
-      } else if (digits.length === 10 && !digits.startsWith('92')) {
-        digits = '92' + digits; // 10-digit number missing both the leading 0 and country code
+      if (digits.startsWith('00')) digits = digits.substring(2);
+      if (/^03\d{9}$/.test(digits)) {
+        digits = '92' + digits.substring(1);
+      } else if (/^3\d{9}$/.test(digits)) {
+        digits = '92' + digits;
       }
+      // Don't silently prepend Pakistan's code to foreign numbers.
+      if (digits.startsWith('0') || digits.length < 8 || digits.length > 15) return '';
       return digits;
     }
 
@@ -2968,11 +2971,11 @@ ${achievement}
     // Attendance feature: salary rules are enforced again by Apps Script.
     let attendancePin = '';
     let attendanceData = { employees: [], attendance: [], payments: [] };
-    function attendanceToday() { const p=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Karachi',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).reduce((o,x)=>(o[x.type]=x.value,o),{}); return `${p.year}-${p.month}-${p.day}`; }
+    function attendanceToday() { return new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Karachi'}); }
     function openAttendance() {
       document.getElementById('attendance-panel').style.display = 'block';
+      document.querySelector('.page-wrapper').style.display = 'none';
       document.querySelector('.top-dashboard-header').style.display = 'none';
-      document.querySelectorAll('.page-body > .container-xl > *').forEach(el => { if (el.id !== 'attendance-panel') el.dataset.attendanceHidden = el.style.display || ''; if (el.id !== 'attendance-panel') el.style.display = 'none'; });
       const today = attendanceToday();
       ['att-date','att-pay-date'].forEach(id => { if (!document.getElementById(id).value) document.getElementById(id).value=today; });
       if (!document.getElementById('att-month').value) document.getElementById('att-month').value=today.slice(0,7);
@@ -2980,7 +2983,7 @@ ${achievement}
     }
     function closeAttendance() {
       document.getElementById('attendance-panel').style.display='none';
-      document.querySelectorAll('.page-body > .container-xl > *').forEach(el => { if (el.id !== 'attendance-panel' && Object.prototype.hasOwnProperty.call(el.dataset,'attendanceHidden')) { el.style.display=el.dataset.attendanceHidden; delete el.dataset.attendanceHidden; } });
+      document.querySelector('.page-wrapper').style.display='';
       document.querySelector('.top-dashboard-header').style.display='';
       attendancePin=''; document.getElementById('attendance-pin').value='';
       document.getElementById('attendance-workspace').style.display='none';
@@ -3020,7 +3023,7 @@ ${achievement}
       document.getElementById('att-employee-list').innerHTML=active.map(e=>`<div class="list-group-item d-flex justify-content-between align-items-center"><span class="fw-semibold">${escapeAtt(e.Name)}</span><button class="btn btn-sm btn-outline-danger" onclick="removeEmployee('${escapeAtt(e.EmployeeID)}','${escapeAtt(e.Name)}')">Remove</button></div>`).join('') || '<div class="text-muted py-2">No active employees yet.</div>';
       const month=document.getElementById('att-month').value || attendanceToday().slice(0,7);
       const rows=attendanceData.attendance.filter(a=>String(a.Date).slice(0,7)===month);
-      const payments=attendanceData.payments.filter(p=>String(p.Month||String(p.Date).slice(0,7))===month);
+      const payments=attendanceData.payments.filter(p=>String(p.Date).slice(0,7)===month);
       const summaries=active.map(e=>{const erows=rows.filter(a=>String(a.EmployeeID)===String(e.EmployeeID));const full=erows.filter(a=>a.Status==='Full Day').length, half=erows.filter(a=>a.Status==='Half Day').length, abs=erows.filter(a=>['Absent','Leave'].includes(a.Status)).length;const earned=erows.reduce((s,a)=>s+Number(a.Earned||0),0), daily=erows.reduce((s,a)=>s+Number(a.DailyPaid||0),0), saved=erows.reduce((s,a)=>s+Number(a.Saved||0),0), monthPaid=payments.filter(p=>String(p.EmployeeID)===String(e.EmployeeID)).reduce((s,p)=>s+Number(p.Amount||0),0);return {e,full,half,abs,earned,daily,saved:Math.max(0,saved-monthPaid)};});
       const total=summaries.reduce((s,x)=>({earned:s.earned+x.earned,daily:s.daily+x.daily,saved:s.saved+x.saved,full:s.full+x.full,half:s.half+x.half}),{earned:0,daily:0,saved:0,full:0,half:0});
       document.getElementById('att-earned').textContent=moneyAtt(total.earned);document.getElementById('att-daily-paid').textContent=moneyAtt(total.daily);document.getElementById('att-saved').textContent=moneyAtt(total.saved);document.getElementById('att-days').textContent=`${total.full} / ${total.half}`;
